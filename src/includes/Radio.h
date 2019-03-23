@@ -53,6 +53,45 @@ class Radio {
                 return true;
             }
         }
+
+        // function for receiving requests
+        request_payload readRequest() {
+            RF24NetworkHeader header;
+            request_payload payload;
+            _network.read(header, &payload, sizeof(payload));
+            return payload;
+        }
+        // function for sending requests
+        bool sendRequest(request_payload& payload,uint16_t node) {
+            if (!_mesh.write(&payload,request_symbol,sizeof(payload),node)) {
+                if (!_mesh.checkConnection()) {
+                    _mesh.renewAddress();
+                }
+                return false;
+            } else {
+                return true;
+            }
+        }
+        // function for receiving responses
+        response_payload readResponse() {
+            RF24NetworkHeader header;
+            response_payload payload;
+            _network.read(header, &payload, sizeof(payload));
+            return payload;
+        }
+        // function for sending responses
+        bool sendResponse(response_payload& payload,uint16_t node) {
+            if (!_mesh.write(&payload,response_symbol,sizeof(payload),node)) {
+                if (!_mesh.checkConnection()) {
+                    _mesh.renewAddress();
+                }
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+
         void DHCP() {
             _mesh.DHCP();
         }

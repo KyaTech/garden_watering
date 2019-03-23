@@ -44,26 +44,34 @@ void loop() {
 
   radio.update();
 
-  // Send to the master node every second
-  if (millis() - displayTimer >= 1000) {
-    displayTimer = millis();
-    payload_t payload = {displayTimer, counter};
-    if (radio.sendMillisPayload(payload,0)) {
-      Serial.println("Send packet #" + String(payload.counter) + " at " + String(payload.ms) + " sucessfully");
-    }
-    counter++;
-  }
-
   while (radio.packageAvailable()) {
     RF24NetworkHeader header = radio.peekHeader();
     switch (header.type) {
       payload_t payload;
+      request_payload req_payload;
+      response_payload res_payload;
       case 'P':
         payload = radio.readMillisPayload();
         Serial.print("Received packet #");
         Serial.print(payload.counter);
         Serial.print(" at ");
         Serial.println(payload.ms);
+        break;
+      case request_symbol:
+        Serial.println("Got request");
+        req_payload = radio.readRequest();
+        printRequest(req_payload);
+
+        res_payload.request_id = req_payload.request_id;
+        String(random(14,23)).toCharArray(res_payload.value,MAX_CHAR_SIZE);
+        radio.sendResponse(res_payload,0);
+
+        Serial.print("Send");
+        printResponse(res_payload);
+        break;
+      case response_symbol:
+        res_payload = radio.readResponse();
+        printResponse(res_payload);
         break;
       default: 
         radio.getNetwork().read(header,0,0);

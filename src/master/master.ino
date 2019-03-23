@@ -47,13 +47,23 @@ void loop() {
     
     uint32_t dat=0;
     switch(header.type) {
-      payload_t payload;
+      payload_t millis_payload;
+      request_payload req_payload;
+      response_payload res_payload;
       case 'P': 
-        payload = radio.readMillisPayload();
+        millis_payload = radio.readMillisPayload();
         Serial.print("Received packet #");
-        Serial.print(payload.counter);
+        Serial.print(millis_payload.counter);
         Serial.print(" at ");
-        Serial.println(payload.ms);
+        Serial.println(millis_payload.ms);
+        break;
+      case request_symbol:
+        req_payload = radio.readRequest();
+        printRequest(req_payload);
+        break;
+      case response_symbol:
+        res_payload = radio.readResponse();
+        printResponse(res_payload);
         break;
       default: radio.getNetwork().read(header,0,0); Serial.println(header.type);break;
     }
@@ -73,12 +83,16 @@ void loop() {
     Serial.println(" ");
   }
 
-  if (millis() - sendTimer > 2000) {
+  if (millis() - sendTimer > 10000) {
     sendTimer = millis();
-    payload_t payload = {sendTimer,counter};
 
-    if (radio.sendMillisPayload(payload,1)) {
-      Serial.println("Send packet #" + String(payload.counter) + " at " + String(payload.ms) + " sucessfully");
+    request_payload payload;
+    payload.request_id = counter;
+    String("Moisture").toCharArray(payload.attribute_requested,MAX_CHAR_SIZE);
+
+    if (radio.sendRequest(payload,1)) {
+      Serial.print("Send "); 
+      printRequest(payload);
     }
 
     counter++;
