@@ -38,44 +38,26 @@ unsigned long counter = 0;
 void setup() {
   Serial.begin(115200);
   radio.beginMesh(nodeID);
+  radio.setRequestCallback(requestCallback);
+  radio.setResponseCallback(responseCallback);
+}
+
+void requestCallback(request_payload payload) {
+  printRequest(payload);
+
+  response_payload response;
+  sprintf(response.request_id,"%s",payload.request_id);
+  String(random(14,23)).toCharArray(response.value,MAX_CHAR_SIZE);
+  radio.sendResponse(response,0);
+
+  Serial.print("Send ");
+  printResponse(response);
+}
+
+void responseCallback(response_payload payload) {
+  printResponse(payload);
 }
 
 void loop() {
-
   radio.update();
-
-  while (radio.packageAvailable()) {
-    RF24NetworkHeader header = radio.peekHeader();
-    switch (header.type) {
-      payload_t payload;
-      request_payload req_payload;
-      response_payload res_payload;
-      case 'P':
-        payload = radio.readMillisPayload();
-        Serial.print("Received packet #");
-        Serial.print(payload.counter);
-        Serial.print(" at ");
-        Serial.println(payload.ms);
-        break;
-      case request_symbol:
-        Serial.println("Got request");
-        req_payload = radio.readRequest();
-        printRequest(req_payload);
-
-        res_payload.request_id = req_payload.request_id;
-        String(random(14,23)).toCharArray(res_payload.value,MAX_CHAR_SIZE);
-        radio.sendResponse(res_payload,0);
-
-        Serial.print("Send");
-        printResponse(res_payload);
-        break;
-      case response_symbol:
-        res_payload = radio.readResponse();
-        printResponse(res_payload);
-        break;
-      default: 
-        radio.getNetwork().read(header,0,0);
-        break;
-    }
-  }
 }

@@ -24,52 +24,30 @@
 /***** Configure the chosen CE,CS pins *****/
 Radio radio;
 
-uint32_t displayTimer = 0;
-uint32_t sendTimer = 0;
-
+unsigned long displayTimer = millis() - 1000;
+unsigned long sendTimer = 0;
 unsigned long counter = 0;
 
 
 void setup() {
   Serial.begin(115200);
   radio.beginMesh(0);
+  radio.setRequestCallback(requestCallback);
+  radio.setResponseCallback(responseCallback);
 }
 
+void requestCallback(request_payload payload) {
+  printRequest(payload);
+}
+
+void responseCallback(response_payload payload) {
+  printResponse(payload);
+}
 
 void loop() {    
   radio.update();
-  radio.DHCP();
-  
-  
-  // Check for incoming data from the sensors
-  if(radio.packageAvailable()){
-    RF24NetworkHeader header = radio.peekHeader();
-    
-    uint32_t dat=0;
-    switch(header.type) {
-      payload_t millis_payload;
-      request_payload req_payload;
-      response_payload res_payload;
-      case 'P': 
-        millis_payload = radio.readMillisPayload();
-        Serial.print("Received packet #");
-        Serial.print(millis_payload.counter);
-        Serial.print(" at ");
-        Serial.println(millis_payload.ms);
-        break;
-      case request_symbol:
-        req_payload = radio.readRequest();
-        printRequest(req_payload);
-        break;
-      case response_symbol:
-        res_payload = radio.readResponse();
-        printResponse(res_payload);
-        break;
-      default: radio.getNetwork().read(header,0,0); Serial.println(header.type);break;
-    }
-  }
-  
-  if(millis() - displayTimer > 5000){
+
+  if(millis() - displayTimer > 10000){
     displayTimer = millis();
     Serial.println(" ");
     Serial.println(F("********Assigned Addresses********"));
@@ -87,7 +65,10 @@ void loop() {
     sendTimer = millis();
 
     request_payload payload;
-    payload.request_id = counter;
+    char request_id[7] = {"000000"};
+    radio.generateRequestID(request_id);
+
+    String(request_id).toCharArray(payload.request_id,7);
     String("Moisture").toCharArray(payload.attribute_requested,MAX_CHAR_SIZE);
 
     if (radio.sendRequest(payload,1)) {
