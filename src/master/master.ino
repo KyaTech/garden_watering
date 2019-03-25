@@ -34,13 +34,19 @@ void setup() {
   radio.beginMesh(0);
   radio.setRequestCallback(requestCallback);
   radio.setResponseCallback(responseCallback);
+  radio.setRegistrationCallback(registrationCallback);
 }
 
-void requestCallback(request_payload payload) {
+void registrationCallback(registration_payload payload,RF24NetworkHeader header) {
+  printRegistration(payload);
+  radio.sendResponse("OK",payload);
+}
+
+void requestCallback(request_payload payload,RF24NetworkHeader header) {
   printRequest(payload);
 }
 
-void responseCallback(response_payload payload) {
+void responseCallback(response_payload payload,RF24NetworkHeader header) {
   printResponse(payload);
 }
 
@@ -49,33 +55,12 @@ void loop() {
 
   if(millis() - displayTimer > 10000){
     displayTimer = millis();
-    Serial.println(" ");
-    Serial.println(F("********Assigned Addresses********"));
-     for(int i=0; i < radio.getMesh().addrListTop; i++){
-       Serial.print("NodeID: ");
-       Serial.print(radio.getMesh().addrList[i].nodeID);
-       Serial.print(" RF24Network Address: 0");
-       Serial.println(radio.getMesh().addrList[i].address,OCT);
-     }
-    Serial.println(F("**********************************"));
-    Serial.println(" ");
+    radio.printMesh();
   }
 
   if (millis() - sendTimer > 10000) {
     sendTimer = millis();
-
-    request_payload payload;
-    char request_id[7] = {"000000"};
-    radio.generateRequestID(request_id);
-
-    String(request_id).toCharArray(payload.request_id,7);
-    String("Moisture").toCharArray(payload.attribute_requested,MAX_CHAR_SIZE);
-
-    if (radio.sendRequest(payload,1)) {
-      Serial.print("Send "); 
-      printRequest(payload);
-    }
-
+    radio.sendRequest("Moisture",1);
     counter++;
   }
 }

@@ -40,21 +40,16 @@ void setup() {
   radio.beginMesh(nodeID);
   radio.setRequestCallback(requestCallback);
   radio.setResponseCallback(responseCallback);
+  radio.registerAtMaster("Moisture");
 }
 
-void requestCallback(request_payload payload) {
+void requestCallback(request_payload payload, RF24NetworkHeader header) {
+  printHeader(header);
   printRequest(payload);
-
-  response_payload response;
-  sprintf(response.request_id,"%s",payload.request_id);
-  String(random(14,23)).toCharArray(response.value,MAX_CHAR_SIZE);
-  radio.sendResponse(response,0);
-
-  Serial.print("Send ");
-  printResponse(response);
+  radio.sendResponse(String(random(16,26)),payload,header);
 }
 
-void responseCallback(response_payload payload) {
+void responseCallback(response_payload payload,RF24NetworkHeader header) {
   printResponse(payload);
 }
 

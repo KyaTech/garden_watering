@@ -14,19 +14,36 @@ class Radio {
         RF24Network _network = RF24Network(_rf24);
         RF24Mesh _mesh = RF24Mesh(_rf24,_network); 
         unsigned long _request_counter = 1;
-        void (*_requestCallback)(request_payload);
-        void (*_responseCallback)(response_payload);
+        String _sensor_type;
+        void (*_requestCallback)(request_payload, RF24NetworkHeader);
+        void (*_responseCallback)(response_payload, RF24NetworkHeader);
+        void (*_registrationCallback)(registration_payload, RF24NetworkHeader);
     public:
         void beginMesh(uint8_t nodeID) {
             _mesh.setNodeID(nodeID);
-            Serial.println(F("Connecting to the mesh..."));
+            if (nodeID != 0) {
+                Serial.println(F("Connecting to the mesh..."));
+            } else {
+                Serial.println(F("Creating mesh ..."));
+            }
             _mesh.begin();
         }
-        void setRequestCallback(void (*requestCallback)(request_payload)) {
+        void registerAtMaster(String sensor_type) {
+            this->_sensor_type = sensor_type;
+            registration_payload payload;
+            payload.request_id = this->generateRequestID();
+            payload.node_id = _mesh.getNodeID();
+            sensor_type.toCharArray(payload.sensor_type,MAX_CHAR_SIZE);
+            sendRegistration(payload);
+        }
+        void setRequestCallback(void (*requestCallback)(request_payload, RF24NetworkHeader)) {
             this->_requestCallback = requestCallback;
         }
-        void setResponseCallback(void (*responseCallback)(response_payload)) {
+        void setResponseCallback(void (*responseCallback)(response_payload, RF24NetworkHeader)) {
             this->_responseCallback = responseCallback;
+        }
+        void setRegistrationCallback(void (*registrationCallback)(registration_payload, RF24NetworkHeader)) {
+            this->_registrationCallback = registrationCallback;
         }
         bool isMaster() {
             return _mesh.getNodeID() == 0;
@@ -50,10 +67,13 @@ class Radio {
                 RF24NetworkHeader header = this->peekHeader();
                 switch (header.type) {
                     case request_symbol:
-                        _requestCallback(this->readRequest());
+                        _requestCallback(this->readRequest(),header);
                         break;
                     case response_symbol:
-                        _responseCallback(this->readResponse());
+                        _responseCallback(this->readResponse(),header);
+                        break;
+                    case registration_symbol:
+                        _registrationCallback(this->readRegistration(),header);
                         break;
                     default: 
                         _network.read(header,0,0);
@@ -83,8 +103,16 @@ class Radio {
                 this->checkConnection();
                 return false;
             } else {
+                Serial.print("Send ");
+                printRequest(payload);
                 return true;
             }
+        }
+        bool sendRequest(String attribute_requested,uint16_t node) {
+            request_payload payload;
+            payload.request_id = this->generateRequestID();
+            String(attribute_requested).toCharArray(payload.attribute_requested,MAX_CHAR_SIZE);
+            return sendRequest(payload, node);
         }
         // function for receiving responses
         response_payload readResponse() {
@@ -99,20 +127,73 @@ class Radio {
                 this->checkConnection();
                 return false;
             } else {
+                Serial.print("Send ");
+                printResponse(payload);
                 return true;
             }
         }
-        void generateRequestID(char request_id[7]) {
-            sprintf(request_id,"%04d%02d",_request_counter,_mesh.getNodeID());
+        bool sendResponse(String value,request_payload& req_payload,uint16_t node) {
+            response_payload payload;
+            payload.request_id = req_payload.request_id;
+            value.toCharArray(payload.value,MAX_CHAR_SIZE);
+            return sendResponse(payload,node);
+        }
+        bool sendResponse(String value,registration_payload& reg_payload) {
+            response_payload payload;
+            payload.request_id = reg_payload.request_id;
+            value.toCharArray(payload.value,MAX_CHAR_SIZE);
+            return sendResponse(payload,reg_payload.node_id);
+        }
+        bool sendResponse(String value,request_payload& req_payload,RF24NetworkHeader& req_header) {
+            return sendResponse(value,req_payload,_mesh.getNodeID(req_header.from_node));
+        }
+        // function for receiving responses
+        registration_payload readRegistration() {
+            RF24NetworkHeader header;
+            registration_payload payload;
+            _network.read(header, &payload, sizeof(payload));
+            return payload;
+        }
+        // function for sending responses
+        bool sendRegistration(registration_payload& payload) {
+            if (!_mesh.write(&payload,registration_symbol,sizeof(payload),0)) {
+                this->checkConnection();
+                return false;
+            } else {
+                return true;
+            }
+        }
+        unsigned long generateRequestID() {
+            unsigned long request_id = 0;
+            request_id += _mesh.getNodeID();
+            request_id += (_request_counter * 100);
             _request_counter++;
+            return request_id;
         };
         void checkConnection() {
             if (!this->isMaster()) {
                 if (!_mesh.checkConnection()) {
-                    Serial.println(F("Reconnecting"));
+                    Serial.println(F("Reconnecting ..."));
                     _mesh.renewAddress();
+                    this->registerAtMaster(this->_sensor_type);
                 }
             }
+        }
+        void printMesh() {
+            Serial.println(" ");
+            Serial.println(F("********Assigned Addresses********"));
+            Serial.print("NodeID: ");
+            Serial.print(_mesh.getNodeID());
+            Serial.println(" RF24Network Address: 00");
+
+            for(int i=0; i < _mesh.addrListTop; i++){
+                Serial.print("NodeID: ");
+                Serial.print(_mesh.addrList[i].nodeID);
+                Serial.print(" RF24Network Address: 0");
+                Serial.println(_mesh.addrList[i].address,OCT);
+            }
+            Serial.println(F("**********************************"));
+            Serial.println(" ");
         }
 
 };
