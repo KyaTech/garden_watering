@@ -17,7 +17,7 @@ struct response_payload : radio_payload {
 
 struct registration_payload : radio_payload {
   	unsigned long request_id;
-    char sensor_type[MAX_CHAR_SIZE];
+    char module_type[MAX_CHAR_SIZE];
     unsigned short node_id;
 };
 
@@ -32,5 +32,5 @@ void printResponse(response_payload& response) {
   Serial.println("Response: #" + String(response.request_id) + " value \"" + String(response.value) + "\"");
 }
 void printRegistration(registration_payload& reg_payload) {
-  Serial.println("Registration: #" + String(reg_payload.request_id) + " sensor_type: \"" + String(reg_payload.sensor_type) + "\" from node " + String(reg_payload.node_id));
+  Serial.println("Registration: #" + String(reg_payload.request_id) + " module_type: \"" + String(reg_payload.module_type) + "\" from node " + String(reg_payload.node_id));
 } 

@@ -58,9 +58,31 @@ void loop() {
     radio.printMesh();
   }
 
-  if (millis() - sendTimer > 10000) {
-    sendTimer = millis();
-    radio.sendRequest("Moisture",1);
-    counter++;
+  if (Serial.available() > 0) {
+    String s = readStringFromSerial();
+    radio.sendRequest(s,1);
   }
+
+  
+}
+
+String readStringFromSerial() {
+  String ret;
+  int c = readByte();
+  while (c >= 0)
+  {
+    ret += (char)c;
+    c = readByte();
+  }
+  return ret;
+}
+
+int readByte()
+{
+  int c = Serial.read();
+  if (c < 0) {
+    delay(1);
+    return Serial.read();
+  }
+  return c;
 }

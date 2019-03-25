@@ -14,7 +14,7 @@ class Radio {
         RF24Network _network = RF24Network(_rf24);
         RF24Mesh _mesh = RF24Mesh(_rf24,_network); 
         unsigned long _request_counter = 1;
-        String _sensor_type;
+        String _module_type;
         void (*_requestCallback)(request_payload, RF24NetworkHeader);
         void (*_responseCallback)(response_payload, RF24NetworkHeader);
         void (*_registrationCallback)(registration_payload, RF24NetworkHeader);
@@ -28,12 +28,12 @@ class Radio {
             }
             _mesh.begin();
         }
-        void registerAtMaster(String sensor_type) {
-            this->_sensor_type = sensor_type;
+        void registerAtMaster(String module_type) {
+            this->_module_type = module_type;
             registration_payload payload;
             payload.request_id = this->generateRequestID();
             payload.node_id = _mesh.getNodeID();
-            sensor_type.toCharArray(payload.sensor_type,MAX_CHAR_SIZE);
+            module_type.toCharArray(payload.module_type,MAX_CHAR_SIZE);
             sendRegistration(payload);
         }
         void setRequestCallback(void (*requestCallback)(request_payload, RF24NetworkHeader)) {
@@ -99,12 +99,12 @@ class Radio {
         }
         // function for sending requests
         bool sendRequest(request_payload& payload,uint16_t node) {
+            Serial.print("Send ");
+            printRequest(payload);
             if (!_mesh.write(&payload,request_symbol,sizeof(payload),node)) {
                 this->checkConnection();
                 return false;
             } else {
-                Serial.print("Send ");
-                printRequest(payload);
                 return true;
             }
         }
@@ -175,7 +175,7 @@ class Radio {
                 if (!_mesh.checkConnection()) {
                     Serial.println(F("Reconnecting ..."));
                     _mesh.renewAddress();
-                    this->registerAtMaster(this->_sensor_type);
+                    this->registerAtMaster(this->_module_type);
                 }
             }
         }

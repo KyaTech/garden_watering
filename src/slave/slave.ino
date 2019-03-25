@@ -28,11 +28,14 @@
    This will be stored in EEPROM on AVR devices, so remains persistent between further uploads, loss of power, etc.
 
  **/
+#define LED_PIN_1 2
+
 #define nodeID 1
 Radio radio;
 
 uint32_t displayTimer = 0;
 unsigned long counter = 0;
+
 
 
 void setup() {
@@ -41,12 +44,30 @@ void setup() {
   radio.setRequestCallback(requestCallback);
   radio.setResponseCallback(responseCallback);
   radio.registerAtMaster("Moisture");
+
+  pinMode(LED_PIN_1,OUTPUT);
 }
 
 void requestCallback(request_payload payload, RF24NetworkHeader header) {
   printHeader(header);
   printRequest(payload);
-  radio.sendResponse(String(random(16,26)),payload,header);
+
+  String attribute_requested = String(payload.attribute_requested);
+
+  if (attribute_requested == "Moisture") {
+    radio.sendResponse(String(random(16,26)),payload,header);
+  } else if (attribute_requested == "Battery") {
+    radio.sendResponse(String(random(0,100)),payload,header);
+  } else if (attribute_requested == "ON") {
+    digitalWrite(LED_PIN_1,HIGH);
+    radio.sendResponse("OK",payload,header);
+  } else if (attribute_requested == "OFF") {
+    digitalWrite(LED_PIN_1,LOW);
+    radio.sendResponse("OK",payload,header);
+  } else {
+    radio.sendResponse(String("404 ERROR"),payload,header);
+  }
+    
 }
 
 void responseCallback(response_payload payload,RF24NetworkHeader header) {
