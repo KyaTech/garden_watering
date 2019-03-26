@@ -208,6 +208,8 @@ class Radio {
         }
         // function for sending commands with a struct given
         bool sendCommand(command_payload& payload,uint16_t node) {
+            Serial.print("Send ");
+            printCommand(payload);
             if (!_mesh.write(&payload,command_symbol,sizeof(payload),node)) {
                 this->checkConnection();
                 return false;
