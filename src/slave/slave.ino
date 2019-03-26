@@ -1,10 +1,5 @@
 
-/** RF24Mesh_Example.ino by TMRh20
-
-   This example sketch shows how to manually configure a node via RF24Mesh, and send data to the
-   master node.
-   The nodes will refresh their network address as soon as a single write fails. This allows the
-   nodes to change position in relation to each other and the master node.
+/**
 */
 
 #include "RF24.h"
@@ -28,7 +23,6 @@
    This will be stored in EEPROM on AVR devices, so remains persistent between further uploads, loss of power, etc.
 
  **/
-#define LED_PIN_1 2
 
 #define nodeID 1
 Radio radio;
@@ -36,6 +30,14 @@ Radio radio;
 uint32_t displayTimer = 0;
 unsigned long counter = 0;
 
+#define Moisture
+#define Valves
+
+
+#ifdef Valves
+int valvePins[] = {2,3};
+int valvePinsLength = (sizeof(valvePins) / sizeof(int));
+#endif
 
 
 void setup() {
@@ -43,9 +45,46 @@ void setup() {
   radio.beginMesh(nodeID);
   radio.setRequestCallback(requestCallback);
   radio.setResponseCallback(responseCallback);
+  radio.setCommandCallback(commandCallback);
   radio.registerAtMaster("Moisture");
 
-  pinMode(LED_PIN_1,OUTPUT);
+  #ifdef Valves
+  for (int i = 0; i < valvePinsLength; i++) {
+    pinMode(valvePins[i],OUTPUT);
+  }
+  #endif
+}
+
+void commandCallback(command_payload payload,RF24NetworkHeader header) {
+  printCommand(payload);
+
+  // area for accepting valve controls
+  #ifdef Valves
+
+  String command = String(payload.command);
+  if (command == "ON") {
+    int index = String(payload.additional_value).toInt();
+
+    if (index > (valvePinsLength - 1)) {
+      radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
+    } else {
+      digitalWrite(valvePins[index],HIGH);
+      radio.sendSimpleResponse(SimpleResponse::OK,payload,header);
+    }
+
+  } else if (command == "OFF") {
+    int index = String(payload.additional_value).toInt();
+
+    if (index > (valvePinsLength - 1)) {
+      radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
+    } else {
+      digitalWrite(valvePins[index],LOW);
+      radio.sendSimpleResponse(SimpleResponse::OK,payload,header);
+    }
+  } else {
+    radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
+  }
+  #endif
 }
 
 void requestCallback(request_payload payload, RF24NetworkHeader header) {
@@ -54,18 +93,18 @@ void requestCallback(request_payload payload, RF24NetworkHeader header) {
 
   String attribute_requested = String(payload.attribute_requested);
 
-  if (attribute_requested == "Moisture") {
-    radio.sendResponse(String(random(16,26)),payload,header);
-  } else if (attribute_requested == "Battery") {
+
+  if (attribute_requested == "Battery") {
     radio.sendResponse(String(random(0,100)),payload,header);
-  } else if (attribute_requested == "ON") {
-    digitalWrite(LED_PIN_1,HIGH);
-    radio.sendResponse("OK",payload,header);
-  } else if (attribute_requested == "OFF") {
-    digitalWrite(LED_PIN_1,LOW);
-    radio.sendResponse("OK",payload,header);
-  } else {
-    radio.sendResponse(String("404 ERROR"),payload,header);
+  } 
+  // area for accepting mositure-requests
+  #ifdef Moisture
+  else if (attribute_requested == "Moisture") {
+    radio.sendResponse(String(random(16,26)),payload,header);
+  } 
+  #endif
+  else {
+    radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
   }
     
 }

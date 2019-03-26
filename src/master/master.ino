@@ -1,16 +1,6 @@
- /** RF24Mesh_Example_Master.ino by TMRh20
-  * 
-  *
-  * This example sketch shows how to manually configure a node via RF24Mesh as a master node, which
-  * will receive all data from sensor nodes.
-  *
-  * The nodes can change physical or logical position in the network, and reconnect through different
-  * routing nodes as required. The master node manages the address assignments for the individual nodes
-  * in a manner similar to DHCP.
-  *
-  */
-  
-  
+/**
+*/
+
 #include "RF24Network.h"
 #include "RF24.h"
 #include "RF24Mesh.h"
@@ -39,7 +29,7 @@ void setup() {
 
 void registrationCallback(registration_payload payload,RF24NetworkHeader header) {
   printRegistration(payload);
-  radio.sendResponse("OK",payload);
+  radio.sendSimpleResponse(SimpleResponse::OK,payload);
 }
 
 void requestCallback(request_payload payload,RF24NetworkHeader header) {
@@ -60,7 +50,14 @@ void loop() {
 
   if (Serial.available() > 0) {
     String s = readStringFromSerial();
-    radio.sendRequest(s,1);
+
+    if (s.startsWith("ON") || s.startsWith("OFF")) {
+      String command = s.substring(0,s.indexOf(" "));
+      String index = s.substring(s.indexOf(" ") + 1, s.length());
+      radio.sendCommand(command,index,1);
+    } else {
+      radio.sendRequest(s,1);
+    }
   }
 
   
