@@ -46,11 +46,23 @@ void setup() {
   radio.setRequestCallback(requestCallback);
   radio.setResponseCallback(responseCallback);
   radio.setCommandCallback(commandCallback);
-  radio.registerAtMaster("Moisture");
-
+  radio.registrate(registrationProcess);
+  
   #ifdef Valves
   for (int i = 0; i < valvePinsLength; i++) {
     pinMode(valvePins[i],OUTPUT);
+  }
+  
+  #endif
+}
+
+void registrationProcess() {
+  #ifdef Moisture
+  radio.waitForAnswer(radio.sendRegistration(ModuleType::SENSOR));
+  #endif
+  #ifdef Valves
+  for (int i = 0; i < valvePinsLength; i++) {
+      radio.waitForAnswer(radio.sendRegistration(ModuleType::VALVE,i,valvePins[i]));
   }
   #endif
 }

@@ -14,11 +14,13 @@ class Radio {
         RF24Network _network = RF24Network(_rf24);
         RF24Mesh _mesh = RF24Mesh(_rf24,_network); 
         unsigned long _request_counter = 1;
-        String _module_type;
         void (*_requestCallback)(request_payload, RF24NetworkHeader);
         void (*_responseCallback)(response_payload, RF24NetworkHeader);
         void (*_registrationCallback)(registration_payload, RF24NetworkHeader);
         void (*_commandCallback)(command_payload, RF24NetworkHeader);
+        void (*_registrationFunction) ();
+        response_payload _last_response;
+        unsigned long _last_failed_request_id;
     public:
         void beginMesh(uint8_t nodeID) {
             _mesh.setNodeID(nodeID);
@@ -29,14 +31,10 @@ class Radio {
             }
             _mesh.begin();
         }
-        void registerAtMaster(String module_type) {
-            this->_module_type = module_type;
-            registration_payload payload;
-            payload.request_id = this->generateRequestID();
-            payload.node_id = _mesh.getNodeID();
-            module_type.toCharArray(payload.module_type,MAX_CHAR_SIZE);
-            sendRegistration(payload);
-        }
+        void registrate(void (*registrationFunction)()) {
+            this->_registrationFunction = registrationFunction;
+            _registrationFunction();
+        } 
         void setRequestCallback(void (*requestCallback)(request_payload, RF24NetworkHeader)) {
             this->_requestCallback = requestCallback;
         }
@@ -74,7 +72,8 @@ class Radio {
                         _requestCallback(this->readRequest(),header);
                         break;
                     case response_symbol:
-                        _responseCallback(this->readResponse(),header);
+                        _last_response = this->readResponse();
+                        _responseCallback(_last_response,header);
                         break;
                     case registration_symbol:
                         _registrationCallback(this->readRegistration(),header);
@@ -110,6 +109,7 @@ class Radio {
             printRequest(payload);
             if (!_mesh.write(&payload,request_symbol,sizeof(payload),node)) {
                 this->checkConnection();
+                _last_failed_request_id = payload.request_id;
                 return false;
             } else {
                 return true;
@@ -136,6 +136,7 @@ class Radio {
         bool sendResponse(response_payload& payload,uint16_t node) {
             if (!_mesh.write(&payload,response_symbol,sizeof(payload),node)) {
                 this->checkConnection();
+                _last_failed_request_id = payload.request_id;
                 return false;
             } else {
                 Serial.print("Send ");
@@ -212,6 +213,7 @@ class Radio {
             printCommand(payload);
             if (!_mesh.write(&payload,command_symbol,sizeof(payload),node)) {
                 this->checkConnection();
+                _last_failed_request_id = payload.request_id;
                 return false;
             } else {
                 return true;
@@ -238,12 +240,37 @@ class Radio {
         }
         // function for sending registrations
         bool sendRegistration(registration_payload& payload) {
+            Serial.print("Send ");
+            printRegistration(payload);
             if (!_mesh.write(&payload,registration_symbol,sizeof(payload),0)) {
                 this->checkConnection();
+                _last_failed_request_id = payload.request_id;
                 return false;
             } else {
                 return true;
             }
+        }
+        // function for sending registrations
+        bool sendRegistration(ModuleType type,int index, int pin) {
+            registration_payload payload;
+            payload.request_id = this->generateRequestID();
+            payload.node_id = _mesh.getNodeID();
+            payload.module_type = type;
+            payload.index = index;
+            payload.pin = pin;
+            sendRegistration(payload);
+            return payload.request_id;
+        }
+        // function for sending registrations
+        bool sendRegistration(ModuleType type) {
+            registration_payload payload;
+            payload.request_id = this->generateRequestID();
+            payload.node_id = _mesh.getNodeID();
+            payload.module_type = type;
+            payload.index = -1;
+            payload.pin = -1;
+            sendRegistration(payload);
+            return payload.request_id;
         }
         unsigned long generateRequestID() {
             unsigned long request_id = 0;
@@ -257,9 +284,22 @@ class Radio {
                 if (!_mesh.checkConnection()) {
                     Serial.println(F("Reconnecting ..."));
                     _mesh.renewAddress();
-                    this->registerAtMaster(this->_module_type);
+                    this->_registrationFunction();
                 }
             }
+        }
+        response_payload waitForAnswer(unsigned long request_id) {
+            unsigned long startTime = millis();
+            if (_last_failed_request_id == request_id) {
+                return;
+            }
+            while((millis()-startTime) < 500)  {
+                this->update();
+                if (_last_response.request_id == request_id) {
+                    break;
+                }
+            }
+            return _last_response;
         }
         void printMesh() {
             Serial.println(" ");
