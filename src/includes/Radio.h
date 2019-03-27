@@ -22,6 +22,7 @@ class Radio {
         response_payload _last_response;
         unsigned long _last_failed_request_id;
     public:
+        // starts the mesh network
         void beginMesh(uint8_t nodeID) {
             _mesh.setNodeID(nodeID);
             if (nodeID != 0) {
@@ -31,6 +32,8 @@ class Radio {
             }
             _mesh.begin();
         }
+
+        // accepts the callback and runs it
         void registrate(void (*registrationFunction)()) {
             this->_registrationFunction = registrationFunction;
             _registrationFunction();
@@ -47,15 +50,14 @@ class Radio {
         void setCommandCallback(void (*commandCallback)(command_payload, RF24NetworkHeader)) {
             this->_commandCallback = commandCallback;
         }
+
+        // return if this node is a master node by checking the node_id
         bool isMaster() {
             return _mesh.getNodeID() == 0;
         }
-        RF24Mesh& getMesh() {
-            return _mesh;
-        }
-        RF24Network& getNetwork() {
-            return _network;
-        }
+
+        // function which updates the network, if available reads from the network and calls the callbacks
+        // also run the DHCP server if this is the master node
         void update() {
             _mesh.update();
 
@@ -88,14 +90,22 @@ class Radio {
             }
 
         }
+
+        // return if a package is available for this node
         bool packageAvailable() {
             return _network.available();
         }
+
+        // function for only peeking the header and not reading it.
+        // usefull for type requests before reading the payload into the datatype
         RF24NetworkHeader peekHeader() {
             RF24NetworkHeader header; 
             _network.peek(header);
             return header;
         }
+        
+        /**** BASIC READING FUNCTIONS *****/
+
         // function for receiving requests
         request_payload readRequest() {
             RF24NetworkHeader header;
@@ -103,6 +113,33 @@ class Radio {
             _network.read(header, &payload, sizeof(payload));
             return payload;
         }
+        // function for receiving responses
+        response_payload readResponse() {
+            RF24NetworkHeader header;
+            response_payload payload;
+            _network.read(header, &payload, sizeof(payload));
+            return payload;
+        }
+        // function for receiving commands
+        command_payload readCommand() {
+            RF24NetworkHeader header;
+            command_payload payload;
+            _network.read(header, &payload, sizeof(payload));
+            return payload;
+        }
+        // function for receiving registrations
+        registration_payload readRegistration() {
+            RF24NetworkHeader header;
+            registration_payload payload;
+            _network.read(header, &payload, sizeof(payload));
+            return payload;
+        }
+
+        /**** END ****/
+
+
+        /**** BASIC SENDING FUNCTIONS *****/
+
         // function for sending requests
         bool sendRequest(request_payload& payload,uint16_t node) {
             Serial.print("Send ");
@@ -115,128 +152,17 @@ class Radio {
                 return true;
             }
         }
-        bool sendRequest(String attribute_requested,String additional_value,uint16_t node) {
-            request_payload payload;
-            payload.request_id = this->generateRequestID();
-            attribute_requested.toCharArray(payload.attribute_requested,MAX_CHAR_SIZE);
-            additional_value.toCharArray(payload.additional_value,MAX_CHAR_SIZE);
-            return sendRequest(payload, node);
-        }
-        bool sendRequest(String attribute_requested,uint16_t node) {
-            return sendRequest(attribute_requested,String(""),node);
-        }
-        // function for receiving responses
-        response_payload readResponse() {
-            RF24NetworkHeader header;
-            response_payload payload;
-            _network.read(header, &payload, sizeof(payload));
-            return payload;
-        }
         // function for sending responses
         bool sendResponse(response_payload& payload,uint16_t node) {
+            Serial.print("Send ");
+            printResponse(payload);
             if (!_mesh.write(&payload,response_symbol,sizeof(payload),node)) {
                 this->checkConnection();
                 _last_failed_request_id = payload.request_id;
                 return false;
             } else {
-                Serial.print("Send ");
-                printResponse(payload);
                 return true;
             }
-        }
-        bool sendResponse(String value,request_payload& req_payload,uint16_t node) {
-            response_payload payload;
-            payload.request_id = req_payload.request_id;
-            value.toCharArray(payload.value,MAX_CHAR_SIZE);
-            return sendResponse(payload,node);
-        }
-        bool sendResponse(String value,command_payload& com_payload,uint16_t node) {
-            response_payload payload;
-            payload.request_id = com_payload.request_id;
-            value.toCharArray(payload.value,MAX_CHAR_SIZE);
-            return sendResponse(payload,node);
-        }
-        bool sendResponse(String value,registration_payload& reg_payload) {
-            response_payload payload;
-            payload.request_id = reg_payload.request_id;
-            value.toCharArray(payload.value,MAX_CHAR_SIZE);
-            return sendResponse(payload,reg_payload.node_id);
-        }
-        bool sendSimpleResponse(SimpleResponse type,registration_payload& reg_payload) {
-            switch (type) {
-                case SimpleResponse::ERROR:
-                    return this->sendResponse(String("ERROR"),reg_payload);
-                case SimpleResponse::OK:
-                    return this->sendResponse(String("OK"),reg_payload);
-                default:
-                    return false;
-            }
-        }
-        bool sendSimpleResponse(SimpleResponse type,request_payload& req_payload,RF24NetworkHeader& header) {
-            switch (type) {
-                case SimpleResponse::ERROR:
-                    return this->sendResponse(String("ERROR"),req_payload,header);
-                case SimpleResponse::OK:
-                    return this->sendResponse(String("OK"),req_payload,header);
-                default:
-                    return false;
-            }
-        }
-        bool sendSimpleResponse(SimpleResponse type,command_payload& com_payload,RF24NetworkHeader& header) {
-            switch (type) {
-                case SimpleResponse::ERROR:
-                    return this->sendResponse(String("ERROR"),com_payload,header);
-                case SimpleResponse::OK:
-                    return this->sendResponse(String("OK"),com_payload,header);
-                default:
-                    return false;
-            }
-        }
-        // function for sending responses with a RF24NetworkHeader and the value given 
-        bool sendResponse(String value,request_payload& req_payload,RF24NetworkHeader& header) {
-            return sendResponse(value,req_payload,_mesh.getNodeID(header.from_node));
-        }
-        // function for sending responses with a RF24NetworkHeader and the value given 
-        bool sendResponse(String value,command_payload& com_payload,RF24NetworkHeader& header) {
-            return sendResponse(value,com_payload,_mesh.getNodeID(header.from_node));
-        }
-        // function for receiving commands
-        command_payload readCommand() {
-            RF24NetworkHeader header;
-            command_payload payload;
-            _network.read(header, &payload, sizeof(payload));
-            return payload;
-        }
-        // function for sending commands with a struct given
-        bool sendCommand(command_payload& payload,uint16_t node) {
-            Serial.print("Send ");
-            printCommand(payload);
-            if (!_mesh.write(&payload,command_symbol,sizeof(payload),node)) {
-                this->checkConnection();
-                _last_failed_request_id = payload.request_id;
-                return false;
-            } else {
-                return true;
-            }
-        }
-        // function for sending commands without the struct given instead command and additional_value
-        bool sendCommand(String command, String additional_value, uint16_t node) {
-            command_payload payload;
-            payload.request_id = this->generateRequestID();
-            command.toCharArray(payload.command,sizeof(payload.command));
-            additional_value.toCharArray(payload.additional_value,sizeof(payload.additional_value));
-            return sendCommand(payload,node);
-        }
-        // function for sending commands without the struct and additional_value given instead command only
-        bool sendCommand(String command, uint16_t node) {
-            return sendCommand(command,String(""),node);
-        }
-        // function for receiving registrations
-        registration_payload readRegistration() {
-            RF24NetworkHeader header;
-            registration_payload payload;
-            _network.read(header, &payload, sizeof(payload));
-            return payload;
         }
         // function for sending registrations
         bool sendRegistration(registration_payload& payload) {
@@ -250,6 +176,79 @@ class Radio {
                 return true;
             }
         }
+        // function for sending commands with a struct given
+        bool sendCommand(command_payload& payload,uint16_t node) {
+            Serial.print("Send ");
+            printCommand(payload);
+            if (!_mesh.write(&payload,command_symbol,sizeof(payload),node)) {
+                this->checkConnection();
+                _last_failed_request_id = payload.request_id;
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        /**** END ****/
+
+
+        /*** additional functions for requests ****/
+        bool sendRequest(String attribute_requested,String additional_value,uint16_t node) {
+            request_payload payload;
+            payload.request_id = this->generateRequestID();
+            attribute_requested.toCharArray(payload.attribute_requested,MAX_CHAR_SIZE);
+            additional_value.toCharArray(payload.additional_value,MAX_CHAR_SIZE);
+            return sendRequest(payload, node);
+        }
+        bool sendRequest(String attribute_requested,uint16_t node) {
+            return sendRequest(attribute_requested,String(""),node);
+        }
+        /**** END ****/
+
+        /**** additional functions for responses ****/
+        bool sendResponse(String value,radio_payload& r_payload,uint16_t node) {
+            response_payload payload;
+            payload.request_id = r_payload.request_id;
+            value.toCharArray(payload.value,MAX_CHAR_SIZE);
+            return sendResponse(payload,node);
+        }
+        // function for sending responses with a RF24NetworkHeader and the value given 
+        bool sendResponse(String value,radio_payload& payload,RF24NetworkHeader& header) {
+            return sendResponse(value,payload,_mesh.getNodeID(header.from_node));
+        }
+        // function for sending standardized responses 
+        bool sendSimpleResponse(SimpleResponse type,radio_payload& payload, RF24NetworkHeader& header) {
+            switch (type) {
+                case SimpleResponse::ERROR:
+                    return this->sendResponse(String("ERROR"),payload,header);
+                case SimpleResponse::OK:
+                    return this->sendResponse(String("OK"),payload,header);
+                default:
+                    return false;
+            }
+        }
+
+        /**** END ****/
+
+        /**** additional functions for commands ****/
+
+        // function for sending commands without the struct given instead command and additional_value
+        bool sendCommand(String command, String additional_value, uint16_t node) {
+            command_payload payload;
+            payload.request_id = this->generateRequestID();
+            command.toCharArray(payload.command,sizeof(payload.command));
+            additional_value.toCharArray(payload.additional_value,sizeof(payload.additional_value));
+            return sendCommand(payload,node);
+        }
+        // function for sending commands without the struct and additional_value given instead command only
+        bool sendCommand(String command, uint16_t node) {
+            return sendCommand(command,String(""),node);
+        }
+
+        /**** END ****/
+
+        /**** additional functions for registrations ****/
+
         // function for sending registrations
         bool sendRegistration(ModuleType type,int index, int pin) {
             registration_payload payload;
@@ -263,15 +262,12 @@ class Radio {
         }
         // function for sending registrations
         bool sendRegistration(ModuleType type) {
-            registration_payload payload;
-            payload.request_id = this->generateRequestID();
-            payload.node_id = _mesh.getNodeID();
-            payload.module_type = type;
-            payload.index = -1;
-            payload.pin = -1;
-            sendRegistration(payload);
-            return payload.request_id;
+            return sendRegistration(type,-1,-1);
         }
+
+        /**** END ****/
+
+        // function for genrerating request_ids based on request_counter and node_id
         unsigned long generateRequestID() {
             unsigned long request_id = 0;
             request_id += _mesh.getNodeID();
@@ -279,6 +275,7 @@ class Radio {
             _request_counter++;
             return request_id;
         };
+        // function for checking connection and reconnecting as well as reregistration at master if necessary
         void checkConnection() {
             if (!this->isMaster()) {
                 if (!_mesh.checkConnection()) {
@@ -288,6 +285,7 @@ class Radio {
                 }
             }
         }
+        // function which takes a request_id and waits for a response with this id
         response_payload waitForAnswer(unsigned long request_id) {
             unsigned long startTime = millis();
             if (_last_failed_request_id == request_id) {
@@ -301,6 +299,7 @@ class Radio {
             }
             return _last_response;
         }
+        // function which prints out all nodes connected to the network
         void printMesh() {
             Serial.println(" ");
             Serial.println(F("********Assigned Addresses********"));

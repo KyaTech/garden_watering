@@ -29,7 +29,7 @@ void setup() {
 
 void registrationCallback(registration_payload payload,RF24NetworkHeader header) {
   printRegistration(payload);
-  radio.sendSimpleResponse(SimpleResponse::OK,payload);
+  radio.sendSimpleResponse(SimpleResponse::OK,payload,header);
 }
 
 void requestCallback(request_payload payload,RF24NetworkHeader header) {

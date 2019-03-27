@@ -15,21 +15,20 @@ enum ModuleType {
   VALVE
 };
 
-struct radio_payload {};
+struct radio_payload {
+    unsigned long request_id;
+};
 
 struct request_payload : radio_payload{
-    unsigned long request_id;
     char attribute_requested[MAX_CHAR_SIZE];
     char additional_value[SHORT_CHAR_SIZE];
 };
 
 struct response_payload : radio_payload {
-    unsigned long request_id;
     char value[MAX_CHAR_SIZE];
 };
 
 struct registration_payload : radio_payload {
-  	unsigned long request_id;
     unsigned short node_id;
     ModuleType module_type;
     int index;
@@ -37,7 +36,6 @@ struct registration_payload : radio_payload {
 };
 
 struct command_payload : radio_payload {
-    unsigned long request_id;
     char command[MAX_CHAR_SIZE];
     char additional_value[SHORT_CHAR_SIZE];
 };
