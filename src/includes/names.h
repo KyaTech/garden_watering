@@ -11,8 +11,8 @@ enum SimpleResponse {
 };
 
 enum ModuleType {
-  SENSOR,
-  VALVE
+  SENSOR = 0,
+  VALVE = 1,
 };
 
 struct radio_payload {
@@ -29,10 +29,9 @@ struct response_payload : radio_payload {
 };
 
 struct registration_payload : radio_payload {
-    unsigned short node_id;
-    ModuleType module_type;
-    int index;
-    int pin;
+    unsigned char module_type;
+    unsigned char index;
+    unsigned char pin;
 };
 
 struct command_payload : radio_payload {
@@ -53,9 +52,9 @@ void printResponse(response_payload& response) {
 }
 void printRegistration(registration_payload& reg_payload) {
   if (reg_payload.module_type == ModuleType::VALVE) {
-    Serial.println("Registration: #" + String(reg_payload.request_id) + " module_type: VALVE from node " + String(reg_payload.node_id) + " at index: " + String(reg_payload.index) + " at pin: " + String(reg_payload.pin));
+    Serial.println("Registration: #" + String(reg_payload.request_id) + " module_type: VALVE at index: " + String(reg_payload.index) + " at pin: " + String(reg_payload.pin));
   } else if (reg_payload.module_type == ModuleType::SENSOR) {
-    Serial.println("Registration: #" + String(reg_payload.request_id) + " module_type: SENSOR from node " + String(reg_payload.node_id) + " at index: " + String(reg_payload.index) + " at pin: " + String(reg_payload.pin));
+    Serial.println("Registration: #" + String(reg_payload.request_id) + " module_type: SENSOR at index: " + String(reg_payload.index) + " at pin: " + String(reg_payload.pin));
   }
 } 
 void printCommand(command_payload& command) {

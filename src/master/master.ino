@@ -11,7 +11,7 @@
 #include "C:\Users\aykbo\OneDrive\Dokumente\Arduino Projektkurs\main_project\src\includes\names.h"
 #include "C:\Users\aykbo\OneDrive\Dokumente\Arduino Projektkurs\main_project\src\includes\Radio.h"
 
-/***** Configure the chosen CE,CS pins *****/
+
 Radio radio;
 
 unsigned long displayTimer = millis() - 1000;
