@@ -15,9 +15,9 @@
   
 #include <RF24/RF24.h>
 #include <RF24Network/RF24Network.h>
-#include "RF24Mesh/RF24Mesh.h"
-#include "examples_RPi/includes_rpi/names.h"
-#include "examples_RPi/includes_rpi/Radio.h"
+#include <RF24Mesh/RF24Mesh.h>
+#include "names.h"
+#include "Radio.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
   
     radio.update();
 
-    if(millis() - displayTimer > 10000){
+    if(millis() - displayTimer > 60000){
       displayTimer = millis();
       radio.printMesh();
     }

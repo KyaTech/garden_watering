@@ -31,9 +31,9 @@ class Radio {
                 Serial.println(F("Creating mesh ..."));
             }
             _mesh.begin();
-            _rf24.setPALevel(RF24_PA_MAX); 
+            /*_rf24.setPALevel(RF24_PA_MAX); 
             _rf24.setDataRate(RF24_1MBPS);
-            _rf24.setCRCLength(RF24_CRC_16);
+            _rf24.setCRCLength(RF24_CRC_16);*/
         }
 
         // accepts the callback and runs it
