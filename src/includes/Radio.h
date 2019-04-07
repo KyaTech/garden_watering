@@ -250,7 +250,7 @@ class Radio {
         /**** additional functions for registrations ****/
 
         // function for sending registrations
-        bool sendRegistration(ModuleType type,int index, int pin) {
+        unsigned long sendRegistration(ModuleType type,int index, int pin) {
             registration_payload payload;
             payload.request_id = this->generateRequestID();
             payload.module_type = type;
@@ -260,7 +260,7 @@ class Radio {
             return payload.request_id;
         }
         // function for sending registrations
-        bool sendRegistration(ModuleType type) {
+        unsigned long sendRegistration(ModuleType type) {
             return sendRegistration(type,-1,-1);
         }
 
@@ -287,19 +287,23 @@ class Radio {
         }
 
         // function which takes a request_id and waits for a response with this id
-        response_payload waitForAnswer(unsigned long request_id) {
-            unsigned long startTime = millis();
-            if (_last_failed_request_id == request_id) {
-                response_payload nullPayload;
+        response_payload waitForAnswer(unsigned long searched_request_id) {
+            unsigned long timout = 3000;
+            response_payload nullPayload;
+            if (_last_failed_request_id == searched_request_id)
+            {
                 return nullPayload;
             }
-            while((millis()-startTime) < 500)  {
+            unsigned long startTime = millis();
+            while ((millis() - startTime) < timout)
+            {
                 this->update();
-                if (_last_response.request_id == request_id) {
-                    break;
-                }
+                if (_last_response.request_id == searched_request_id)
+                {
+                    return _last_response;
+                } 
             }
-            return _last_response;
+            return nullPayload;
         }
 
         // function which prints out all nodes connected to the network

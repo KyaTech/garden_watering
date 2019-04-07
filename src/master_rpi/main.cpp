@@ -12,16 +12,27 @@
   * in a manner similar to DHCP.
   *
   */
+
+#include <string>
+#include <sstream>
+#include <iostream>
   
 #include <RF24/RF24.h>
 #include <RF24Network/RF24Network.h>
 #include <RF24Mesh/RF24Mesh.h>
-#include "names.h"
-#include "Radio.h"
-#include <iostream>
-#include <string>
-#include <sstream>
+
+#include <usr_interrupt_handler.hpp>
+#include <runtime_utils.hpp>
+#include "microsvc_controller.hpp"
+
+using namespace web;
+using namespace cfx;
 using namespace std;
+
+#include "names.hpp"
+#include "func.hpp"
+#include "radio.hpp"
+
 
 Radio radio = Radio();
 
@@ -46,34 +57,34 @@ void responseCallback(response_payload payload,RF24NetworkHeader header) {
 }
 
 int main(int argc, char** argv) {
-  
-  radio.beginMesh(0);
-  radio.setRequestCallback(requestCallback);
-  radio.setResponseCallback(responseCallback);
-  radio.setRegistrationCallback(registrationCallback);
 
-  while(1) {
+    MeshMasterRestServer server;
+    server.setEndpoint("http://0.0.0.0:8080/api/v1");
+    server.setRadio(&radio);
   
-    radio.update();
+    radio.beginMesh(0);
+    radio.setRequestCallback(requestCallback);
+    radio.setResponseCallback(responseCallback);
+    radio.setRegistrationCallback(registrationCallback);
 
-    if(millis() - displayTimer > 60000){
-      displayTimer = millis();
-      radio.printMesh();
+    try {
+        // wait for server initialization...
+        server.accept().wait();
+        std::cout << "Modern C++ Microservice now listening for requests at: " << server.endpoint() << '\n';
+        
+        radio.updateAndLog();
+        InterruptHandler::waitForUserInterrupt();
+
+        server.shutdown().wait();
+    }
+    catch(std::exception & e) {
+        std::cerr << "something wrong happen! :(" << '\n';
+    }
+    catch(...) {
+        RuntimeUtils::printStackTrace();
     }
 
-    if(millis() - actionTimer > 5000) {
-      actionTimer = millis();
-      if(toggle) {
-        radio.sendCommand("ON","0",1);
-      } else {
-        radio.sendCommand("OFF","0",1);
-      }
-      toggle = !toggle;
-    }
-  
-  }
-
-  return 0;
+    return 0;
 }
 
       
