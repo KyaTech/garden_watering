@@ -54,7 +54,7 @@ void MeshMasterRestServer::handleGet(http_request message)
                 int node = std::stoi(nodeString);
                 string index = getQueryString(message, "index");
                 
-                response_payload response_mesh;
+                response_payload_struct response_mesh;
                 if (index.empty()) {
                     response_mesh = _radio->waitForAnswer(_radio->sendRequest("Moisture",node));
                 } else {
@@ -107,7 +107,7 @@ void MeshMasterRestServer::handlePost(http_request message)
                     json::value index = request.at("index");
                     json::value node = request.at("node");
                     if (controls.is_string() && index.is_integer() && node.is_integer()) {
-                        response_payload response_mesh = _radio->waitForAnswer(_radio->sendCommand(controls.as_string(),std::to_string(index.as_integer()), node.as_integer()));
+                        response_payload_struct response_mesh = _radio->waitForAnswer(_radio->sendCommand(controls.as_string(),std::to_string(index.as_integer()), node.as_integer()));
 
                         json::value response;
                         response["request_id"] = json::value::number((unsigned int)response_mesh.request_id);

@@ -16,14 +16,6 @@ void Radio::beginMesh(uint8_t nodeID)
     _rf24.setPALevel(RF24_PA_MAX);
     _rf24.setDataRate(RF24_1MBPS);
     _rf24.setCRCLength(RF24_CRC_16);
-
-    _cts = cancellation_token_source();
-    auto token = _cts.get_token();
-
-    _background = create_task([token] {
-        cancel_current_task();
-    },
-                              token);
 }
 
 // accepts the callback and runs it
@@ -32,19 +24,19 @@ void Radio::registrate(void (*registrationFunction)())
     this->_registrationFunction = registrationFunction;
     _registrationFunction();
 }
-void Radio::setRequestCallback(void (*requestCallback)(request_payload, RF24NetworkHeader))
+void Radio::setRequestCallback(void (*requestCallback)(request_payload_struct, RF24NetworkHeader))
 {
     this->_requestCallback = requestCallback;
 }
-void Radio::setResponseCallback(void (*responseCallback)(response_payload, RF24NetworkHeader))
+void Radio::setResponseCallback(void (*responseCallback)(response_payload_struct, RF24NetworkHeader))
 {
     this->_responseCallback = responseCallback;
 }
-void Radio::setRegistrationCallback(void (*registrationCallback)(registration_payload, RF24NetworkHeader))
+void Radio::setRegistrationCallback(void (*registrationCallback)(registration_payload_struct, RF24NetworkHeader))
 {
     this->_registrationCallback = registrationCallback;
 }
-void Radio::setCommandCallback(void (*commandCallback)(command_payload, RF24NetworkHeader))
+void Radio::setCommandCallback(void (*commandCallback)(command_payload_struct, RF24NetworkHeader))
 {
     this->_commandCallback = commandCallback;
 }
@@ -77,7 +69,7 @@ void Radio::update()
             _requestCallback(this->readRequest(), header);
             break;
         case response_symbol:
-            _last_response = response_payload();
+            _last_response = response_payload_struct();
             _last_response = this->readResponse();
             _responseCallback(_last_response, header);
             break;
@@ -112,34 +104,34 @@ RF24NetworkHeader Radio::peekHeader()
 /**** BASIC READING FUNCTIONS *****/
 
 // function for receiving requests
-request_payload Radio::readRequest()
+request_payload_struct Radio::readRequest()
 {
     RF24NetworkHeader header;
-    request_payload payload;
+    request_payload_struct payload;
     _network.read(header, &payload, sizeof(payload));
     return payload;
 }
 // function for receiving responses
-response_payload Radio::readResponse()
+response_payload_struct Radio::readResponse()
 {
     RF24NetworkHeader header;
-    response_payload payload;
+    response_payload_struct payload;
     _network.read(header, &payload, sizeof(payload));
     return payload;
 }
 // function for receiving commands
-command_payload Radio::readCommand()
+command_payload_struct Radio::readCommand()
 {
     RF24NetworkHeader header;
-    command_payload payload;
+    command_payload_struct payload;
     _network.read(header, &payload, sizeof(payload));
     return payload;
 }
 // function for receiving registrations
-registration_payload Radio::readRegistration()
+registration_payload_struct Radio::readRegistration()
 {
     RF24NetworkHeader header;
-    registration_payload payload;
+    registration_payload_struct payload;
     _network.read(header, &payload, sizeof(payload));
     return payload;
 }
@@ -148,75 +140,22 @@ registration_payload Radio::readRegistration()
 
 /**** BASIC SENDING FUNCTIONS *****/
 
-// function for sending requests
-bool Radio::sendRequest(request_payload &payload, uint16_t node)
+unsigned long Radio::sendRadioPayload(RadioPayload &payload)
 {
-    this->stopTask();
-    printRequest(payload, true);
-    if (!_mesh.write(&payload, request_symbol, sizeof(payload), node))
+    if (_taskIsRunning && payload.getType() != PayloadType::RESPONSE)
+        this->stopTask();
+
+    payload.printPayload(true);
+
+    if (!_mesh.write(payload.asSendable(), payload.getSymbol(), payload.sizeOfPayload(), payload.getToNode()))
     {
         this->checkConnection();
         _last_failed_request_id = payload.request_id;
+    }
+
+    if (_taskIsRunning && payload.getType() != PayloadType::RESPONSE)
         this->updateAndLog();
-        return false;
-    }
-    else
-    {
-        this->updateAndLog();
-        return true;
-    }
-}
-// function for sending responses
-bool Radio::sendResponse(response_payload &payload, uint16_t node)
-{
-    printResponse(payload, true);
-    if (!_mesh.write(&payload, response_symbol, sizeof(payload), node))
-    {
-        this->checkConnection();
-        _last_failed_request_id = payload.request_id;
-        return false;
-    }
-    else
-    {
-        return true;
-    }
-}
-// function for sending registrations
-bool Radio::sendRegistration(registration_payload &payload)
-{
-    this->stopTask();
-    printRegistration(payload, true);
-    if (!_mesh.write(&payload, registration_symbol, sizeof(payload), 0))
-    {
-        this->checkConnection();
-        _last_failed_request_id = payload.request_id;
-        this->updateAndLog();
-        return false;
-    }
-    else
-    {
-        this->updateAndLog();
-        return true;
-    }
-    
-}
-// function for sending commands with a struct given
-bool Radio::sendCommand(command_payload &payload, uint16_t node)
-{
-    this->stopTask();
-    printCommand(payload, true);
-    if (!_mesh.write(&payload, command_symbol, sizeof(payload), node))
-    {
-        this->checkConnection();
-        _last_failed_request_id = payload.request_id;
-        this->updateAndLog();
-        return false;
-    }
-    else
-    {
-        this->updateAndLog();
-        return true;
-    }
+    return payload.request_id;
 }
 
 /**** END ****/
@@ -224,11 +163,12 @@ bool Radio::sendCommand(command_payload &payload, uint16_t node)
 /*** additional functions for requests ****/
 unsigned long Radio::sendRequest(string attribute_requested, string additional_value, uint16_t node)
 {
-    request_payload payload;
+    RequestPayload payload;
     payload.request_id = this->generateRequestID();
-    strcpy(payload.attribute_requested, attribute_requested.c_str());
-    strcpy(payload.additional_value, additional_value.c_str());
-    sendRequest(payload, node);
+    payload.attribute_requested = attribute_requested;
+    payload.additional_value = additional_value;
+    payload.setToNode(node);
+    sendRadioPayload(payload);
     return payload.request_id;
 }
 unsigned long Radio::sendRequest(string attribute_requested, uint16_t node)
@@ -238,21 +178,22 @@ unsigned long Radio::sendRequest(string attribute_requested, uint16_t node)
 /**** END ****/
 
 /**** additional functions for responses ****/
-unsigned long Radio::sendResponse(string value, radio_payload &r_payload, uint16_t node)
+unsigned long Radio::sendResponse(string value, radio_payload_struct &r_payload, uint16_t node)
 {
-    response_payload payload;
+    ResponsePayload payload;
     payload.request_id = r_payload.request_id;
-    strcpy(payload.value, value.c_str());
-    sendResponse(payload, node);
-    return payload.request_id;
+    payload.value = value;
+    payload.setToNode(node);
+
+    return sendRadioPayload(payload);
 }
 // function for sending responses with a RF24NetworkHeader and the value given
-unsigned long Radio::sendResponse(string value, radio_payload &payload, RF24NetworkHeader &header)
+unsigned long Radio::sendResponse(string value, radio_payload_struct &payload, RF24NetworkHeader &header)
 {
     return sendResponse(value, payload, _mesh.getNodeID(header.from_node));
 }
 // function for sending standardized responses
-unsigned long Radio::sendSimpleResponse(SimpleResponse type, radio_payload &payload, RF24NetworkHeader &header)
+unsigned long Radio::sendSimpleResponse(SimpleResponse type, radio_payload_struct &payload, RF24NetworkHeader &header)
 {
     switch (type)
     {
@@ -272,12 +213,13 @@ unsigned long Radio::sendSimpleResponse(SimpleResponse type, radio_payload &payl
 // function for sending commands without the struct given instead command and additional_value
 unsigned long Radio::sendCommand(string command, string additional_value, uint16_t node)
 {
-    command_payload payload;
+    CommandPayload payload;
     payload.request_id = this->generateRequestID();
-    strcpy(payload.command, command.c_str());
-    strcpy(payload.additional_value, additional_value.c_str());
-    sendCommand(payload, node);
-    return payload.request_id;
+    payload.command = command;
+    payload.additional_value = additional_value;
+    payload.setToNode(node);
+
+    return sendRadioPayload(payload);
 }
 // function for sending commands without the struct and additional_value given instead command only
 unsigned long Radio::sendCommand(string command, uint16_t node)
@@ -292,13 +234,12 @@ unsigned long Radio::sendCommand(string command, uint16_t node)
 // function for sending registrations
 unsigned long Radio::sendRegistration(ModuleType type, int index, int pin)
 {
-    registration_payload payload;
+    RegistrationPayload payload;
     payload.request_id = this->generateRequestID();
     payload.module_type = type;
     payload.index = index;
     payload.pin = pin;
-    sendRegistration(payload);
-    return payload.request_id;
+    return sendRadioPayload(payload);
 }
 // function for sending registrations
 unsigned long Radio::sendRegistration(ModuleType type)
@@ -333,10 +274,16 @@ void Radio::checkConnection()
 }
 
 // function which takes a request_id and waits for a response with this id
-response_payload Radio::waitForAnswer(unsigned long searched_request_id)
+response_payload_struct Radio::waitForAnswer(unsigned long searched_request_id)
 {
+    printf("Found %lu \n",_last_response.request_id);
+
+    if(!_taskIsRunning) {
+        this->updateAndLog();
+    }
+
     unsigned long timout = 3000;
-    response_payload nullPayload;
+    response_payload_struct nullPayload;
     if (_last_failed_request_id == searched_request_id)
     {
         return nullPayload;
@@ -347,10 +294,9 @@ response_payload Radio::waitForAnswer(unsigned long searched_request_id)
         if (_last_response.request_id == searched_request_id)
         {
             return _last_response;
-        } 
+        }
     }
     return nullPayload;
-    
 }
 
 // function which prints out all nodes connected to the network
@@ -397,6 +343,7 @@ void Radio::updateAndLog()
             }
         }
     },token);
+    _taskIsRunning = true;
 
     printf("Started Updating\n");
 }
@@ -405,4 +352,5 @@ void Radio::stopTask()
 {
     _cts.cancel();
     _background.wait();
+    _taskIsRunning = false;
 }

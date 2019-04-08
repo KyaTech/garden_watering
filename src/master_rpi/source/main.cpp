@@ -29,7 +29,7 @@ using namespace web;
 using namespace cfx;
 using namespace std;
 
-#include "names.hpp"
+#include "payloads.hpp"
 #include "func.hpp"
 #include "radio.hpp"
 
@@ -43,16 +43,16 @@ unsigned long actionTimer = 0;
 
 bool toggle = false;
 
-void registrationCallback(registration_payload payload,RF24NetworkHeader header) {
+void registrationCallback(registration_payload_struct payload,RF24NetworkHeader header) {
   printRegistration(payload,radio.getNodeID(header.from_node));
   radio.sendSimpleResponse(SimpleResponse::OK,payload,header);
 }
 
-void requestCallback(request_payload payload,RF24NetworkHeader header) {
+void requestCallback(request_payload_struct payload,RF24NetworkHeader header) {
   printRequest(payload);
 }
 
-void responseCallback(response_payload payload,RF24NetworkHeader header) {
+void responseCallback(response_payload_struct payload,RF24NetworkHeader header) {
   printResponse(payload);
 }
 

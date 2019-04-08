@@ -30,6 +30,7 @@ endif()
 add_executable(${PROJECT_NAME}  ./source/main.cpp
                                 ./source/func.cpp
                                 ./source/radio.cpp
+                                ./source/payloads.cpp
                                 ./source/microsvc_controller.cpp
                                 ./source/user_manager.cpp
                                 ./source/foundation/network_utils.cpp

@@ -15,7 +15,7 @@ using namespace std;
 using namespace concurrency;
 using namespace pplx;
 
-#include "names.hpp"
+#include "payloads.hpp"
 #include "func.hpp"
 
 class Radio {
@@ -24,25 +24,26 @@ class Radio {
         RF24Network _network = RF24Network(_rf24);
         RF24Mesh _mesh = RF24Mesh(_rf24,_network);
         unsigned long _request_counter = 1;
-        void (*_requestCallback)(request_payload, RF24NetworkHeader);
-        void (*_responseCallback)(response_payload, RF24NetworkHeader);
-        void (*_registrationCallback)(registration_payload, RF24NetworkHeader);
-        void (*_commandCallback)(command_payload, RF24NetworkHeader);
+        void (*_requestCallback)(request_payload_struct, RF24NetworkHeader);
+        void (*_responseCallback)(response_payload_struct, RF24NetworkHeader);
+        void (*_registrationCallback)(registration_payload_struct, RF24NetworkHeader);
+        void (*_commandCallback)(command_payload_struct, RF24NetworkHeader);
         void (*_registrationFunction) ();
-        response_payload _last_response;
+        response_payload_struct _last_response;
         unsigned long _last_failed_request_id = 0;
         pplx::task<void> _background;
         pplx::cancellation_token_source _cts;
+        bool _taskIsRunning = false;
     public:
         // starts the mesh network
         void beginMesh(uint8_t nodeID);
 
         // accepts the callback and runs it
         void registrate(void (*registrationFunction)()); 
-        void setRequestCallback(void (*requestCallback)(request_payload, RF24NetworkHeader));
-        void setResponseCallback(void (*responseCallback)(response_payload, RF24NetworkHeader));
-        void setRegistrationCallback(void (*registrationCallback)(registration_payload, RF24NetworkHeader));
-        void setCommandCallback(void (*commandCallback)(command_payload, RF24NetworkHeader));
+        void setRequestCallback(void (*requestCallback)(request_payload_struct, RF24NetworkHeader));
+        void setResponseCallback(void (*responseCallback)(response_payload_struct, RF24NetworkHeader));
+        void setRegistrationCallback(void (*registrationCallback)(registration_payload_struct, RF24NetworkHeader));
+        void setCommandCallback(void (*commandCallback)(command_payload_struct, RF24NetworkHeader));
 
         // return if this node is a master node by checking the node_id
         bool isMaster();
@@ -59,22 +60,24 @@ class Radio {
         RF24NetworkHeader peekHeader();
 
         // function for receiving requests
-        request_payload readRequest();
+        request_payload_struct readRequest();
         // function for receiving responses
-        response_payload readResponse();
+        response_payload_struct readResponse();
         // function for receiving commands
-        command_payload readCommand();
+        command_payload_struct readCommand();
         // function for receiving registrations
-        registration_payload readRegistration();
+        registration_payload_struct readRegistration();
 
+
+        unsigned long sendRadioPayload(RadioPayload& payload);
         // function for sending requests
-        bool sendRequest(request_payload& payload,uint16_t node);
+        bool sendRequest(request_payload_struct& payload,uint16_t node);
         // function for sending responses
-        bool sendResponse(response_payload& payload,uint16_t node);
+        bool sendResponse(response_payload_struct& payload,uint16_t node);
         // function for sending registrations
-        bool sendRegistration(registration_payload& payload);
+        bool sendRegistration(registration_payload_struct& payload);
         // function for sending commands with a struct given
-        bool sendCommand(command_payload& payload,uint16_t node);
+        bool sendCommand(command_payload_struct& payload,uint16_t node);
 
         //
         unsigned long sendRequest(string attribute_requested,string additional_value,uint16_t node);
@@ -82,11 +85,11 @@ class Radio {
         unsigned long sendRequest(string attribute_requested,uint16_t node);
 
         //
-        unsigned long sendResponse(string value,radio_payload& r_payload,uint16_t node);
+        unsigned long sendResponse(string value,radio_payload_struct& r_payload,uint16_t node);
         // function for sending responses with a RF24NetworkHeader and the value given 
-        unsigned long sendResponse(string value,radio_payload& payload,RF24NetworkHeader& header);
+        unsigned long sendResponse(string value,radio_payload_struct& payload,RF24NetworkHeader& header);
         // function for sending standardized responses 
-        unsigned long sendSimpleResponse(SimpleResponse type,radio_payload& payload, RF24NetworkHeader& header);
+        unsigned long sendSimpleResponse(SimpleResponse type,radio_payload_struct& payload, RF24NetworkHeader& header);
 
         // function for sending commands without the struct given instead command and additional_value
         unsigned long sendCommand(string command, string additional_value, uint16_t node);
@@ -105,7 +108,7 @@ class Radio {
         void checkConnection();
 
         // function which takes a request_id and waits for a response with this id
-        response_payload waitForAnswer(unsigned long request_id);
+        response_payload_struct waitForAnswer(unsigned long request_id);
 
         // function which prints out all nodes connected to the network
         void printMesh();
