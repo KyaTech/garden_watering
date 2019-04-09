@@ -1,5 +1,6 @@
 #include "radio.hpp"
 
+
 // starts the mesh network
 void Radio::beginMesh(uint8_t nodeID)
 {
@@ -140,32 +141,41 @@ registration_payload_struct Radio::readRegistration()
 
 /**** BASIC SENDING FUNCTIONS *****/
 
-unsigned long Radio::sendRadioPayload(RadioPayload &payload)
+unsigned long Radio::sendRadioPayload(RadioPayload &payload) throw(PayloadNotSendableException)
 {
-    if (_taskIsRunning && payload.getType() != PayloadType::RESPONSE)
+    bool taskIsRunning = _taskIsRunning; 
+    if (taskIsRunning && payload.getType() != PayloadType::RESPONSE)
         this->stopTask();
 
-    if (!this->isValidNode(payload.getToNode()) || !_mesh.write(payload.asSendable(), payload.getSymbol(), payload.sizeOfPayload(), payload.getToNode()))
+    if (this->isValidNode(payload.getToNode()))
     {
-        this->checkConnection();
-        _last_failed_request_id = payload.request_id;
+        if (_mesh.write(payload.asSendable(), payload.getSymbol(), payload.sizeOfPayload(), payload.getToNode()))
+        {
+            payload.printPayload(true);
+        }
+        else
+        {
+            this->checkConnection();
+            _last_failed_request_id = payload.request_id;
 
-        printf("Payload or node uncorrect:\n");
-        printf("-> NodeID: %d\n-> Payload: ",payload.getToNode());
-        payload.printPayload(false);
-    } else {
-        payload.printPayload(true);
+            if (taskIsRunning && payload.getType() != PayloadType::RESPONSE) this->updateAndLog();
+            throw PayloadNotSendableException("Couldn't write the given payload. The node may be not available", payload.request_id);
+        }
+    }
+    else
+    {
+        if (taskIsRunning && payload.getType() != PayloadType::RESPONSE) this->updateAndLog();
+        throw PayloadNotSendableException("The given node is not valid", payload.request_id);
     }
 
-    if (_taskIsRunning && payload.getType() != PayloadType::RESPONSE)
-        this->updateAndLog();
+    if (taskIsRunning && payload.getType() != PayloadType::RESPONSE) this->updateAndLog();
     return payload.request_id;
 }
 
 /**** END ****/
 
 /*** additional functions for requests ****/
-unsigned long Radio::sendRequest(string attribute_requested, string additional_value, uint16_t node)
+unsigned long Radio::sendRequest(string attribute_requested, string additional_value, uint16_t node) throw(PayloadNotSendableException)
 {
     RequestPayload payload;
     payload.request_id = this->generateRequestID();
@@ -175,14 +185,14 @@ unsigned long Radio::sendRequest(string attribute_requested, string additional_v
     sendRadioPayload(payload);
     return payload.request_id;
 }
-unsigned long Radio::sendRequest(string attribute_requested, uint16_t node)
+unsigned long Radio::sendRequest(string attribute_requested, uint16_t node) throw(PayloadNotSendableException)
 {
     return sendRequest(attribute_requested, "", node);
 }
 /**** END ****/
 
 /**** additional functions for responses ****/
-unsigned long Radio::sendResponse(string value, radio_payload_struct &r_payload, uint16_t node)
+unsigned long Radio::sendResponse(string value, radio_payload_struct &r_payload, uint16_t node) throw(PayloadNotSendableException)
 {
     ResponsePayload payload;
     payload.request_id = r_payload.request_id;
@@ -192,12 +202,12 @@ unsigned long Radio::sendResponse(string value, radio_payload_struct &r_payload,
     return sendRadioPayload(payload);
 }
 // function for sending responses with a RF24NetworkHeader and the value given
-unsigned long Radio::sendResponse(string value, radio_payload_struct &payload, RF24NetworkHeader &header)
+unsigned long Radio::sendResponse(string value, radio_payload_struct &payload, RF24NetworkHeader &header) throw(PayloadNotSendableException)
 {
     return sendResponse(value, payload, _mesh.getNodeID(header.from_node));
 }
 // function for sending standardized responses
-unsigned long Radio::sendSimpleResponse(SimpleResponse type, radio_payload_struct &payload, RF24NetworkHeader &header)
+unsigned long Radio::sendSimpleResponse(SimpleResponse type, radio_payload_struct &payload, RF24NetworkHeader &header) throw(PayloadNotSendableException)
 {
     switch (type)
     {
@@ -215,7 +225,7 @@ unsigned long Radio::sendSimpleResponse(SimpleResponse type, radio_payload_struc
 /**** additional functions for commands ****/
 
 // function for sending commands without the struct given instead command and additional_value
-unsigned long Radio::sendCommand(string command, string additional_value, uint16_t node)
+unsigned long Radio::sendCommand(string command, string additional_value, uint16_t node) throw(PayloadNotSendableException)
 {
     CommandPayload payload;
     payload.request_id = this->generateRequestID();
@@ -226,7 +236,7 @@ unsigned long Radio::sendCommand(string command, string additional_value, uint16
     return sendRadioPayload(payload);
 }
 // function for sending commands without the struct and additional_value given instead command only
-unsigned long Radio::sendCommand(string command, uint16_t node)
+unsigned long Radio::sendCommand(string command, uint16_t node) throw(PayloadNotSendableException)
 {
     return sendCommand(command, "", node);
 }
@@ -236,7 +246,7 @@ unsigned long Radio::sendCommand(string command, uint16_t node)
 /**** additional functions for registrations ****/
 
 // function for sending registrations
-unsigned long Radio::sendRegistration(ModuleType type, int index, int pin)
+unsigned long Radio::sendRegistration(ModuleType type, int index, int pin) throw(PayloadNotSendableException)
 {
     RegistrationPayload payload;
     payload.request_id = this->generateRequestID();
@@ -246,7 +256,7 @@ unsigned long Radio::sendRegistration(ModuleType type, int index, int pin)
     return sendRadioPayload(payload);
 }
 // function for sending registrations
-unsigned long Radio::sendRegistration(ModuleType type)
+unsigned long Radio::sendRegistration(ModuleType type) throw(PayloadNotSendableException)
 {
     return sendRegistration(type, -1, -1);
 }
@@ -278,17 +288,22 @@ void Radio::checkConnection()
 }
 
 // function which takes a request_id and waits for a response with this id
-response_payload_struct Radio::waitForAnswer(unsigned long searched_request_id)
+response_payload_struct Radio::waitForAnswer(unsigned long searched_request_id) throw(ResponseNotFoundException)
 {
 
-    if(!_taskIsRunning) {
+    if (!_taskIsRunning)
+    {
         this->updateAndLog();
     }
 
     unsigned long timout = 3000;
     response_payload_struct nullPayload;
+    strcpy(nullPayload.value, "");
+    nullPayload.request_id = 0;
+
     if (_last_failed_request_id == searched_request_id)
     {
+        throw ResponseNotFoundException(searched_request_id);
         return nullPayload;
     }
     unsigned long startTime = millis();
@@ -299,6 +314,7 @@ response_payload_struct Radio::waitForAnswer(unsigned long searched_request_id)
             return _last_response;
         }
     }
+    throw ResponseNotFoundException(searched_request_id);
     return nullPayload;
 }
 
@@ -317,9 +333,12 @@ void Radio::printMesh()
     printf("\n");
 }
 
-bool Radio::isValidNode(uint16_t node) {
-    for (int i = 0; i < _mesh.addrListTop; i++) {
-        if (_mesh.addrList[i].nodeID == node) {
+bool Radio::isValidNode(uint16_t node)
+{
+    for (int i = 0; i < _mesh.addrListTop; i++)
+    {
+        if (_mesh.addrList[i].nodeID == node)
+        {
             return true;
         }
     }
@@ -343,10 +362,7 @@ void Radio::updateAndLog()
         {
             if (token.is_canceled())
             {
-                printf("*** Stopping this task\n");
-                // TODO: Perform any necessary cleanup here...
-
-                // Cancel the current task.
+                printf("*** Stopping task\n");
                 cancel_current_task();
             }
             else
@@ -354,7 +370,8 @@ void Radio::updateAndLog()
                 this_radio->update();
             }
         }
-    },token);
+    },
+                              token);
     _taskIsRunning = true;
 
     printf("*** Starting Task\n");

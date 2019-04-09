@@ -19,22 +19,22 @@ struct radio_payload {
     unsigned long request_id;
 };
 
-struct request_payload : radio_payload{
+struct request_payload : public radio_payload{
     char attribute_requested[MAX_CHAR_SIZE];
     char additional_value[SHORT_CHAR_SIZE];
 };
 
-struct response_payload : radio_payload {
+struct response_payload : public radio_payload {
     char value[MAX_CHAR_SIZE];
 };
 
-struct registration_payload : radio_payload {
+struct registration_payload : public radio_payload {
     unsigned char module_type;
     unsigned char index;
     unsigned char pin;
 };
 
-struct command_payload : radio_payload {
+struct command_payload : public radio_payload {
     char command[MAX_CHAR_SIZE];
     char additional_value[SHORT_CHAR_SIZE];
 };

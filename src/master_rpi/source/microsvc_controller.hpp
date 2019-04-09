@@ -28,6 +28,7 @@
 
 #include <basic_controller.hpp>
 #include "radio.hpp"
+#include "exceptions.hpp"
 
 using namespace cfx;
 

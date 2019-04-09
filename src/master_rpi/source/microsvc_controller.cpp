@@ -48,36 +48,60 @@ void MeshMasterRestServer::handleGet(http_request message)
     {
         if (path[0] == "requests" && path[1] == "sensor")
         {
-            string nodeString = getQueryString(message,"node");
-            
-            if (!nodeString.empty()) {
+            string nodeString = getQueryString(message, "node");
+
+            if (!nodeString.empty())
+            {
                 int node = std::stoi(nodeString);
                 string index = getQueryString(message, "index");
-                
-                response_payload_struct response_mesh;
-                if (index.empty()) {
-                    response_mesh = _radio->waitForAnswer(_radio->sendRequest("Moisture",node));
-                } else {
-                    response_mesh = _radio->waitForAnswer(_radio->sendRequest("Moisture",index,node));
-                }
 
-                json::value response;
-                response["request_id"] = json::value::number((unsigned int)response_mesh.request_id);
-                response["value"] = json::value::string(response_mesh.value);
-                message.reply(status_codes::OK, response);
-                return;
-            } else {
+                try
+                {
+                    response_payload_struct response_mesh;
+                    if (index.empty())
+                    {
+                        response_mesh = _radio->waitForAnswer(_radio->sendRequest("Moisture", node));
+                    }
+                    else
+                    {
+                        response_mesh = _radio->waitForAnswer(_radio->sendRequest("Moisture", index, node));
+                    }
+
+                    json::value response;
+                    response["request_id"] = json::value::number((unsigned int)response_mesh.request_id);
+                    response["value"] = json::value::string(response_mesh.value);
+                    message.reply(status_codes::OK, response);
+                    return;
+                }
+                catch (ResponseNotFoundException &e)
+                {
+                    e.printException();
+                    json::value response;
+                    response["error"] = json::value();
+                    response["error"]["message"] = json::value::string("Couldn't get a request from this node");
+                    response["error"]["request_id"] = json::value::number((uint32_t)e.getRequestID());
+                    message.reply(status_codes::BadRequest, response);
+                }
+                catch (PayloadNotSendableException &e)
+                {
+                    e.printException();
+                    json::value response;
+                    response["error"] = json::value();
+                    response["error"]["message"] = json::value::string(e.giveMessage());
+                    response["error"]["request_id"] = json::value::number((uint32_t)e.getRequestID());
+                    message.reply(status_codes::BadRequest, response);
+                }
+            }
+            else
+            {
                 json::value response;
                 response["message"] = json::value::string("The queried node is not available.");
-                message.reply(status_codes::BadRequest,response);
+                message.reply(status_codes::BadRequest, response);
             }
-
-            
         }
     }
 
     message.reply(status_codes::NotFound);
-    
 }
 
 void MeshMasterRestServer::handlePatch(http_request message)
@@ -97,41 +121,59 @@ void MeshMasterRestServer::handlePost(http_request message)
     {
         if (path[0] == "controls" && path[1] == "valve")
         {
-    
+
             message
-            .extract_json()
-            .then([=](json::value request) {
-                try
-                {
-                    json::value controls = request.at("control");
-                    json::value index = request.at("index");
-                    json::value node = request.at("node");
-                    if (controls.is_string() && index.is_integer() && node.is_integer()) {
-                        response_payload_struct response_mesh = _radio->waitForAnswer(_radio->sendCommand(controls.as_string(),std::to_string(index.as_integer()), node.as_integer()));
+                .extract_json()
+                .then([=](json::value request) {
+                    try
+                    {
+                        json::value controls = request.at("control");
+                        json::value index = request.at("index");
+                        json::value node = request.at("node");
+                        if (controls.is_string() && index.is_integer() && node.is_integer())
+                        {
+                            response_payload_struct response_mesh = _radio->waitForAnswer(_radio->sendCommand(controls.as_string(), std::to_string(index.as_integer()), node.as_integer()));
 
-                        json::value response;
-                        response["request_id"] = json::value::number((unsigned int)response_mesh.request_id);
-                        response["message"] = json::value::string(response_mesh.value);
-                        message.reply(status_codes::OK, response);
-                    } else {
-                        throw json::json_exception(U("Wrong datatypes"));  
+                            json::value response;
+                            response["request_id"] = json::value::number((unsigned int)response_mesh.request_id);
+                            response["message"] = json::value::string(response_mesh.value);
+                            message.reply(status_codes::OK, response);
+                        }
+                        else
+                        {
+                            throw json::json_exception(U("Wrong datatypes"));
+                        }
                     }
-
-                }
-                catch (json::json_exception &e)
-                {
-                    json::value response;
-                    response["message"] = json::value::string("There may be one or more incorrect elements in your request.");
-                    message.reply(status_codes::BadRequest,response);
-                }
-            });
+                    catch (ResponseNotFoundException &e)
+                    {
+                        e.printException();
+                        json::value response;
+                        response["error"] = json::value();
+                        response["error"]["message"] = json::value::string("Couldn't get a request from this node");
+                        response["error"]["request_id"] = json::value::number((uint32_t)e.getRequestID());
+                        message.reply(status_codes::BadRequest, response);
+                    }
+                    catch (PayloadNotSendableException &e)
+                    {
+                        e.printException();
+                        json::value response;
+                        response["error"] = json::value();
+                        response["error"]["message"] = json::value::string(e.giveMessage());
+                        response["error"]["request_id"] = json::value::number((uint32_t)e.getRequestID());
+                        message.reply(status_codes::BadRequest, response);
+                    }
+                    catch (json::json_exception &e)
+                    {
+                        json::value response;
+                        response["message"] = json::value::string("There may be one or more incorrect elements in your request.");
+                        message.reply(status_codes::BadRequest, response);
+                    }
+                });
             return;
-            
         }
     }
 
     message.reply(status_codes::NotFound);
-    
 }
 
 void MeshMasterRestServer::handleDelete(http_request message)

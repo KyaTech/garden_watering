@@ -7,6 +7,8 @@
 
 #include <runtime_utils.hpp>
 #include <string>
+#include <sstream>
+#include <iostream>
 #include <pplx/pplxtasks.h>
 #include <pplx/pplxcancellation_token.h>
 #include <pplx/pplx.h>
@@ -17,6 +19,7 @@ using namespace pplx;
 
 #include "payloads.hpp"
 #include "func.hpp"
+#include "exceptions.hpp"
 
 class Radio {
     private:
@@ -95,7 +98,7 @@ class Radio {
         * @param payload which should be sendCommand
         * @return request_id of payload
         */
-        unsigned long sendRadioPayload(RadioPayload& payload);
+        unsigned long sendRadioPayload(RadioPayload& payload) throw(PayloadNotSendableException);
 
         /**
         * extra function for sending a request without giving a payload
@@ -104,31 +107,31 @@ class Radio {
         * @param nodeID of the node which should be addressed
         * @return request_id of payload
         */
-        unsigned long sendRequest(string attribute_requested,string additional_value,uint16_t node);
+        unsigned long sendRequest(string attribute_requested,string additional_value,uint16_t node) throw(PayloadNotSendableException);
         /**
         * extra function for sending a request without giving a payload
         * @param requested attribute of the payload
         * @param nodeID of the node which should be addressed
         * @return request_id of payload
         */
-        unsigned long sendRequest(string attribute_requested,uint16_t node);
+        unsigned long sendRequest(string attribute_requested,uint16_t node) throw(PayloadNotSendableException);
 
         //
-        unsigned long sendResponse(string value,radio_payload_struct& r_payload,uint16_t node);
+        unsigned long sendResponse(string value,radio_payload_struct& r_payload,uint16_t node) throw(PayloadNotSendableException);
         // function for sending responses with a RF24NetworkHeader and the value given 
-        unsigned long sendResponse(string value,radio_payload_struct& payload,RF24NetworkHeader& header);
+        unsigned long sendResponse(string value,radio_payload_struct& payload,RF24NetworkHeader& header) throw(PayloadNotSendableException);
         // function for sending standardized responses 
-        unsigned long sendSimpleResponse(SimpleResponse type,radio_payload_struct& payload, RF24NetworkHeader& header);
+        unsigned long sendSimpleResponse(SimpleResponse type,radio_payload_struct& payload, RF24NetworkHeader& header) throw(PayloadNotSendableException);
 
         // function for sending commands without the struct given instead command and additional_value
-        unsigned long sendCommand(string command, string additional_value, uint16_t node);
+        unsigned long sendCommand(string command, string additional_value, uint16_t node) throw(PayloadNotSendableException);
         // function for sending commands without the struct and additional_value given instead command only
-        unsigned long sendCommand(string command, uint16_t node);
+        unsigned long sendCommand(string command, uint16_t node) throw(PayloadNotSendableException);
 
         // function for sending registrations
-        unsigned long sendRegistration(ModuleType type,int index, int pin);
+        unsigned long sendRegistration(ModuleType type,int index, int pin) throw(PayloadNotSendableException);
         // function for sending registrations
-        unsigned long sendRegistration(ModuleType type);
+        unsigned long sendRegistration(ModuleType type) throw(PayloadNotSendableException);
 
         // function for genrerating request_ids based on request_counter and node_id
         unsigned long generateRequestID();
@@ -137,7 +140,7 @@ class Radio {
         void checkConnection();
 
         // function which takes a request_id and waits for a response with this id
-        response_payload_struct waitForAnswer(unsigned long request_id);
+        response_payload_struct waitForAnswer(unsigned long request_id) throw (ResponseNotFoundException);
 
         // function which prints out all nodes connected to the network
         void printMesh();
