@@ -145,12 +145,16 @@ unsigned long Radio::sendRadioPayload(RadioPayload &payload)
     if (_taskIsRunning && payload.getType() != PayloadType::RESPONSE)
         this->stopTask();
 
-    payload.printPayload(true);
-
-    if (!_mesh.write(payload.asSendable(), payload.getSymbol(), payload.sizeOfPayload(), payload.getToNode()))
+    if (!this->isValidNode(payload.getToNode()) || !_mesh.write(payload.asSendable(), payload.getSymbol(), payload.sizeOfPayload(), payload.getToNode()))
     {
         this->checkConnection();
         _last_failed_request_id = payload.request_id;
+
+        printf("Payload or node uncorrect:\n");
+        printf("-> NodeID: %d\n-> Payload: ",payload.getToNode());
+        payload.printPayload(false);
+    } else {
+        payload.printPayload(true);
     }
 
     if (_taskIsRunning && payload.getType() != PayloadType::RESPONSE)
@@ -276,7 +280,6 @@ void Radio::checkConnection()
 // function which takes a request_id and waits for a response with this id
 response_payload_struct Radio::waitForAnswer(unsigned long searched_request_id)
 {
-    printf("Found %lu \n",_last_response.request_id);
 
     if(!_taskIsRunning) {
         this->updateAndLog();
@@ -314,6 +317,15 @@ void Radio::printMesh()
     printf("\n");
 }
 
+bool Radio::isValidNode(uint16_t node) {
+    for (int i = 0; i < _mesh.addrListTop; i++) {
+        if (_mesh.addrList[i].nodeID == node) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int16_t Radio::getNodeID(uint32_t adress)
 {
     return _mesh.getNodeID(adress);
@@ -331,7 +343,7 @@ void Radio::updateAndLog()
         {
             if (token.is_canceled())
             {
-                printf("Stopping this task\n");
+                printf("*** Stopping this task\n");
                 // TODO: Perform any necessary cleanup here...
 
                 // Cancel the current task.
@@ -345,7 +357,7 @@ void Radio::updateAndLog()
     },token);
     _taskIsRunning = true;
 
-    printf("Started Updating\n");
+    printf("*** Starting Task\n");
 }
 
 void Radio::stopTask()

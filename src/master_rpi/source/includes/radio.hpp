@@ -45,43 +45,72 @@ class Radio {
         void setRegistrationCallback(void (*registrationCallback)(registration_payload_struct, RF24NetworkHeader));
         void setCommandCallback(void (*commandCallback)(command_payload_struct, RF24NetworkHeader));
 
-        // return if this node is a master node by checking the node_id
+        /**
+        * return if this node is a master node by checking the node_id
+        */
         bool isMaster();
 
-        // function which updates the network, if available reads from the network and calls the callbacks
-        // also run the DHCP server if this is the master node
+        /**
+        * function which updates the network, if available reads from the network and calls the callbacks
+        * also run the DHCP server if this is the master node
+        */
         void update();
 
-        // return if a package is available for this node
+        /**
+        *  return if a package is available for this node
+        */
         bool packageAvailable();
 
-        // function for only peeking the header and not reading it.
-        // usefull for type requests before reading the payload into the datatype
+        /** 
+        * function for only peeking the header and not reading it.
+        * usefull for type requests before reading the payload into the datatype
+        * @return the header in form of `RF24NetworkHeader`
+        */
         RF24NetworkHeader peekHeader();
 
-        // function for receiving requests
+        /**
+        * function for receiving requests
+        * @return request in the form of a struct
+        */
         request_payload_struct readRequest();
-        // function for receiving responses
+        /**
+        * function for receiving responses
+        * @return response in the form of a struct
+        */
         response_payload_struct readResponse();
-        // function for receiving commands
+        /**
+        * function for receiving commands
+        * @return command in the form of a struct
+        */
         command_payload_struct readCommand();
-        // function for receiving registrations
+        /** 
+        * function for receiving registrations 
+        * @return registration in the form of a struct
+        */
         registration_payload_struct readRegistration();
 
-
+        /**
+        * function for sending any RadioPayload (@see payloads.hpp)
+        * if the node is not valid, the function doesn't even send the payload
+        * @param payload which should be sendCommand
+        * @return request_id of payload
+        */
         unsigned long sendRadioPayload(RadioPayload& payload);
-        // function for sending requests
-        bool sendRequest(request_payload_struct& payload,uint16_t node);
-        // function for sending responses
-        bool sendResponse(response_payload_struct& payload,uint16_t node);
-        // function for sending registrations
-        bool sendRegistration(registration_payload_struct& payload);
-        // function for sending commands with a struct given
-        bool sendCommand(command_payload_struct& payload,uint16_t node);
 
-        //
+        /**
+        * extra function for sending a request without giving a payload
+        * @param requested attribute of the payload
+        * @param additional value(s) of the payload
+        * @param nodeID of the node which should be addressed
+        * @return request_id of payload
+        */
         unsigned long sendRequest(string attribute_requested,string additional_value,uint16_t node);
-        //
+        /**
+        * extra function for sending a request without giving a payload
+        * @param requested attribute of the payload
+        * @param nodeID of the node which should be addressed
+        * @return request_id of payload
+        */
         unsigned long sendRequest(string attribute_requested,uint16_t node);
 
         //
@@ -118,6 +147,8 @@ class Radio {
         void updateAndLog();
 
         void stopTask();
+
+        bool isValidNode(uint16_t node);
 
         
 };
