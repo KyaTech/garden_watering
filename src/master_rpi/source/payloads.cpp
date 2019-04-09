@@ -13,10 +13,12 @@ char RequestPayload::getSymbol() {
     return request_symbol;
 }
 const void* RequestPayload::asSendable() {
+    this->_buildPayload();
     return &(this->_payload);
 }
 
 size_t RequestPayload::sizeOfPayload() {
+    this->_buildPayload();
     return sizeof(this->_payload);
 }
 
