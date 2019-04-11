@@ -29,6 +29,31 @@ the response will come in the format
 }
 ````
 
+
+### List all Nodes
+**Definition**   
+`GET /nodes`
+
+Returns all nodes which are registered in the network  
+
+**Responses**
+- `200 OK`
+````json
+{"nodes":
+    [
+      {
+        "node": 1
+      },
+      {
+        "node": 6
+      },
+      {
+        "..." : "..."
+      }      
+    ]
+}
+````
+
 ### Battery Value
 **Definition**  
 `GET /nodes/<node>/battery`
@@ -41,6 +66,7 @@ the response will come in the format
   "battery": "[Battery in %]"
 }
 ````
+
 
 ### Sensor Value
 **Definition**  
@@ -73,8 +99,6 @@ Optional: If more than one sensor on one device:
   "message": "OK"
 }
 ````
-
-
 
 
 ### Valve State

@@ -289,19 +289,6 @@ response_payload_struct Radio::waitForAnswer(unsigned long searched_request_id) 
     throw ResponseNotFoundException(searched_request_id);
 }
 
-// function which prints out all nodes connected to the network
-void Radio::printMesh() {
-    printf("\n");
-    printf("********Assigned Addresses********\n");
-    printf("NodeID: %d RF24Network Address: 00\n", _mesh.getNodeID());
-
-    for (int i = 0; i < _mesh.addrListTop; i++) {
-        printf("NodeID: %d RF24Network Address: 0%d\n", _mesh.addrList[i].nodeID, _mesh.addrList[i].address);
-    }
-    printf("**********************************\n");
-    printf("\n");
-}
-
 bool Radio::isValidNode(uint16_t node) {
     for (int i = 0; i < _mesh.addrListTop; i++) {
         if (_mesh.addrList[i].nodeID == node) {
@@ -339,4 +326,14 @@ void Radio::stopTask() {
     _cts.cancel();
     _background.wait();
     _taskIsRunning = false;
+}
+
+vector<int> Radio::listAllDevices() {
+    vector<int> devices;
+
+    for (int i = 0; i < _mesh.addrListTop; i++) {
+        devices.push_back(_mesh.addrList[i].nodeID);
+    }
+
+    return devices;
 }

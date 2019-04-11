@@ -156,7 +156,7 @@ public:
     // function for sending registrations
     unsigned long sendRegistration(ModuleType type) noexcept(false);
 
-    // function for genrerating request_ids based on request_counter and node_id
+    // function for generating request_ids based on request_counter and node_id
     unsigned long generateRequestID();
 
     // function for checking connection and reconnecting as well as reregistration at master if necessary
@@ -164,9 +164,6 @@ public:
 
     // function which takes a request_id and waits for a response with this id
     response_payload_struct waitForAnswer(unsigned long request_id) noexcept(false);
-
-    // function which prints out all nodes connected to the network
-    void printMesh();
 
     int16_t getNodeID(uint32_t adress);
 
@@ -176,7 +173,7 @@ public:
 
     bool isValidNode(uint16_t node);
 
-
+    vector<int> listAllDevices();
 };
 
 #endif

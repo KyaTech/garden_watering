@@ -44,83 +44,108 @@ void MeshMasterRestServer::handleGet(http_request message) {
     auto path = requestPath(message);
     if (!path.empty()) {
         if (path[0] == "nodes") {
-            string nodeString = path[1];
-            int node = std::stoi(nodeString);
+            if (path.size() > 1 && !path[1].empty()) {
+                string nodeString = path[1];
+                int node = std::stoi(nodeString);
 
-            if (path.size() > 2 && !path[2].empty()) {
+                if (path.size() > 2 && !path[2].empty()) {
 
-                try {
-                    if (path[2] == "battery") {
-                        response_payload_struct response_mesh = _radio->waitForAnswer(
-                                _radio->sendRequest("Battery", node));
-
-                        json::value response;
-                        response["request_id"] = json::value::number((uint32_t) response_mesh.request_id);
-                        response["battery"] = json::value::number(std::stoi(string(response_mesh.value)));
-                        message.reply(status_codes::OK, response);
-                        return;
-                    } else if (path[2] == "sensors") {
-                        response_payload_struct response_mesh{};
-                        if (path.size() > 3 && !path[3].empty()) {
-                            string indexString = path[3];
-                            int index = std::stoi(indexString);
-                            response_mesh = _radio->waitForAnswer(_radio->sendRequest("Moisture", indexString, node));
-                        } else {
-                            response_mesh = _radio->waitForAnswer(_radio->sendRequest("Moisture", node));
-                        }
-
-                        json::value response;
-                        response["request_id"] = json::value::number((uint32_t) response_mesh.request_id);
-                        response["value"] = json::value::string(response_mesh.value);
-                        message.reply(status_codes::OK, response);
-                        return;
-
-                    } else if (path[2] == "valves") {
-                        response_payload_struct response_mesh{};
-                        if (path.size() > 3 && !path[3].empty()) {
-                            string indexString = path[3];
-                            int index = std::stoi(indexString);
-                            response_mesh = _radio->waitForAnswer(_radio->sendRequest("State", indexString, node));
+                    try {
+                        if (path[2] == "battery") {
+                            response_payload_struct response_mesh = _radio->waitForAnswer(
+                                    _radio->sendRequest("Battery", node));
 
                             json::value response;
                             response["request_id"] = json::value::number((uint32_t) response_mesh.request_id);
-                            response["state"] = json::value::string(response_mesh.value);
+                            response["battery"] = json::value::number(std::stoi(string(response_mesh.value)));
                             message.reply(status_codes::OK, response);
                             return;
-                        } else {
+                        } else if (path[2] == "sensors") {
+                            response_payload_struct response_mesh{};
+                            if (path.size() > 3 && !path[3].empty()) {
+                                string indexString = path[3];
+                                int index = std::stoi(indexString);
+                                response_mesh = _radio->waitForAnswer(
+                                        _radio->sendRequest("Moisture", indexString, node));
+                            } else {
+                                response_mesh = _radio->waitForAnswer(_radio->sendRequest("Moisture", node));
+                            }
+
                             json::value response;
-                            response["error"] = json::value();
-                            response["error"]["message"] = json::value::string(
-                                    "Please specify an index in the form of a identifier");
-                            response["error"]["wanted_url_form"] = json::value::string("/nodes/<node>/valves/<index>");
+                            response["request_id"] = json::value::number((uint32_t) response_mesh.request_id);
+                            response["value"] = json::value::string(response_mesh.value);
                             message.reply(status_codes::OK, response);
                             return;
+
+                        } else if (path[2] == "valves") {
+                            response_payload_struct response_mesh{};
+                            if (path.size() > 3 && !path[3].empty()) {
+                                string indexString = path[3];
+                                int index = std::stoi(indexString);
+                                response_mesh = _radio->waitForAnswer(_radio->sendRequest("State", indexString, node));
+
+                                json::value response;
+                                response["request_id"] = json::value::number((uint32_t) response_mesh.request_id);
+                                response["state"] = json::value::string(response_mesh.value);
+                                message.reply(status_codes::OK, response);
+                                return;
+                            } else {
+                                json::value response;
+                                response["error"] = json::value();
+                                response["error"]["message"] = json::value::string(
+                                        "Please specify an index in the form of a identifier");
+                                response["error"]["wanted_url_form"] = json::value::string(
+                                        "/nodes/<node>/valves/<index>");
+                                message.reply(status_codes::OK, response);
+                                return;
+                            }
                         }
+
+                    } catch (ResponseNotFoundException &e) {
+                        e.printException();
+
+                        json::value response;
+                        response["error"] = json::value();
+                        response["error"]["request_id"] = json::value::number((uint32_t) e.getRequestID());
+                        response["error"]["internalMessage"] = json::value::string(e.giveMessage());
+                        message.reply(status_codes::BadRequest, response);
+                        return;
+
+                    } catch (PayloadNotSendableException &e) {
+                        e.printException();
+
+                        json::value response;
+                        response["error"] = json::value();
+                        response["error"]["request_id"] = json::value::number((uint32_t) e.getRequestID());
+                        response["error"]["internalMessage"] = json::value::string(e.giveMessage());
+                        message.reply(status_codes::BadRequest, response);
+                        return;
+
                     }
 
-                } catch (ResponseNotFoundException &e) {
-                    e.printException();
-
+                } else {
                     json::value response;
                     response["error"] = json::value();
-                    response["error"]["request_id"] = json::value::number((uint32_t) e.getRequestID());
-                    response["error"]["internalMessage"] = json::value::string(e.giveMessage());
-                    message.reply(status_codes::BadRequest, response);
-                } catch (PayloadNotSendableException &e) {
-                    e.printException();
-
-                    json::value response;
-                    response["error"] = json::value();
-                    response["error"]["request_id"] = json::value::number((uint32_t) e.getRequestID());
-                    response["error"]["internalMessage"] = json::value::string(e.giveMessage());
-                    message.reply(status_codes::BadRequest, response);
+                    response["error"]["message"] = json::value::string(
+                            "Please give more information about your destination");
+                    response["error"]["wanted_url_form"] = json::value::string("/nodes/<node>/...");
+                    message.reply(status_codes::OK, response);
+                    return;
                 }
+
             } else {
+                //List all devices
+                vector<int> devices = _radio->listAllDevices();
+
+
                 json::value response;
-                response["error"] = json::value();
-                response["error"]["message"] = json::value::string(
-                        "Please give more information about your destination");
-                response["error"]["wanted_url_form"] = json::value::string("/nodes/<node>/...");
+                response["nodes"] = json::value::array();
+
+                for (int i = 0; i < devices.size(); i++) {
+                    response["nodes"][i] = json::value();
+                    response["nodes"][i]["node"] = devices[i];
+                }
+
                 message.reply(status_codes::OK, response);
                 return;
             }
