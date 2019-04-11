@@ -34,9 +34,9 @@ namespace cfx {
     public:
         static void printStackTrace() {
             const int MAX_CALLSTACK = 100;
-            void * callstack[MAX_CALLSTACK];
+            void *callstack[MAX_CALLSTACK];
             int frames;
-                        
+
             // get void*'s for all entries on the stack...
             frames = backtrace(callstack, MAX_CALLSTACK);
 

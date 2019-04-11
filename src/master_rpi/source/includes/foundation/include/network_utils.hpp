@@ -1,5 +1,5 @@
 //
-//  Created by Ivan Mejia on 12/03/16.
+//  Created by Ivan Mejia on 11/28/16.
 //
 // MIT License
 //
@@ -24,33 +24,39 @@
 // SOFTWARE.
 //
 
-#include <condition_variable>
-#include <mutex>
-#include <iostream>
-#include <signal.h>
+#pragma once
 
-static std::condition_variable _condition;
-static std::mutex _mutex;
+#include <string>
+#include "std_micro_service.hpp"
+
+using namespace boost::asio;
+using namespace boost::asio::ip;
 
 namespace cfx {
-    class InterruptHandler {
+
+    using HostInetInfo = tcp::resolver::iterator;
+
+    class NetworkUtils {
+    private:
+        static HostInetInfo queryHostInetInfo();
+
+        static std::string hostIP(unsigned short family);
+
     public:
-        static void hookSIGINT() {
-            signal(SIGINT, handleUserInterrupt);        
+        // gets the host IP4 string formatted
+        static std::string hostIP4() {
+            return hostIP(AF_INET);
         }
 
-        static void handleUserInterrupt(int signal){
-            if (signal == SIGINT) {
-                std::cout << "SIGINT trapped ..." << '\n';
-                _condition.notify_one();
-            }
+        // gets the host IP6 string formatted
+        static std::string hostIP6() {
+
+            return hostIP(AF_INET6);
         }
 
-        static void waitForUserInterrupt() {
-            std::unique_lock<std::mutex> lock { _mutex };
-            _condition.wait(lock);
-            std::cout << "user has signaled to interrup program..." << '\n';
-            lock.unlock();
+        static std::string hostName() {
+            return ip::host_name();
         }
     };
+
 }

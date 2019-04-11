@@ -24,30 +24,33 @@
 // SOFTWARE.
 //
 
-#pragma once
+#include <condition_variable>
+#include <mutex>
+#include <iostream>
+#include <csignal>
 
-#include <cpprest/http_msg.h>
-
-using namespace web;
-using namespace http;
+static std::condition_variable _condition;
+static std::mutex _mutex;
 
 namespace cfx {
+    class InterruptHandler {
+    public:
+        static void hookSIGINT() {
+            signal(SIGINT, handleUserInterrupt);
+        }
 
-   /*!
-    * Dispatcher class represents the basic interface for a 
-    * web serivce handler.
-    */
-    class Controller {
-    public: 
-        virtual void handleGet(http_request message) = 0;
-        virtual void handlePut(http_request message) = 0;
-        virtual void handlePost(http_request message) = 0;
-        virtual void handleDelete(http_request message) = 0;
-        virtual void handlePatch(http_request messge) = 0;
-        virtual void handleHead(http_request message) = 0;
-        virtual void handleOptions(http_request message) = 0;
-        virtual void handleTrace(http_request message) = 0;
-        virtual void handleConnect(http_request message) = 0;
-        virtual void handleMerge(http_request message) = 0;
+        static void handleUserInterrupt(int signal) {
+            if (signal == SIGINT) {
+                std::cout << "SIGINT trapped ..." << '\n';
+                _condition.notify_one();
+            }
+        }
+
+        static void waitForUserInterrupt() {
+            std::unique_lock<std::mutex> lock{_mutex};
+            _condition.wait(lock);
+            std::cout << "user has signaled to interrup program..." << '\n';
+            lock.unlock();
+        }
     };
 }

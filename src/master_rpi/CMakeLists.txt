@@ -11,33 +11,33 @@ set(OPENSSL_VERSION "1.0.1")
 # Configure compiler options ...
 message("-- compiler: ${CMAKE_CXX_COMPILER_ID}")
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 
     message("-- configuring clang options")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -arch x86_64 -std=c++11 -stdlib=libc++ -DBOOST_LOG_DYN_LINK -Wno-deprecated-declarations")
 
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 
     message("-- configuring gcc options")
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -DBOOST_LOG_DYN_LINK -lrf24-bcm -lrf24network -lrf24mesh ")
 
-endif()
+endif ()
 
 # Project construction ...
 
 # source files ...
-add_executable(${PROJECT_NAME}  ./source/main.cpp
-                                ./source/func.cpp
-                                ./source/radio.cpp
-                                ./source/payloads.cpp
-                                ./source/microsvc_controller.cpp
-                                ./source/foundation/network_utils.cpp
-                                ./source/foundation/basic_controller.cpp)
+add_executable(${PROJECT_NAME} source/main.cpp
+        source/includes/func.cpp
+        source/includes/radio.cpp
+        source/includes/payloads.cpp
+        source/includes/microsvc_controller.cpp
+        source/includes/foundation/network_utils.cpp
+        source/includes/foundation/basic_controller.cpp)
 
 # headers search paths ...
 set(CPPRESTSDK_INCLUDE_DIR "./libs/cpprestsdk/Release/include")
-set(MICROSERVICE_INCLUDE_DIR "./source/foundation/include")
+set(MICROSERVICE_INCLUDE_DIR "source/includes/foundation/include")
 message(MICROSERVICE " ${MICROSERVICE_INCLUDE_DIR}")
 set(SOURCE_INCLUDES "./source/includes")
 
