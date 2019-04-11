@@ -143,7 +143,7 @@ unsigned long Radio::sendRadioPayload(RadioPayload &payload) noexcept(false) {
             _last_failed_request_id = payload.request_id;
 
             if (taskIsRunning && payload.getType() != PayloadType::RESPONSE) this->updateAndLog();
-            throw PayloadNotSendableException("Couldn't write the given payload. The node may be not available",
+            throw PayloadNotSendableException("Could not write the given payload. The node may be not available",
                                               payload.request_id);
         }
     } else {
