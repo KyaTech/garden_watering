@@ -2,3 +2,4 @@ build/
 src/tests/
 .vscode
 temp/
+src/master_rpi/libs

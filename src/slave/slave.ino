@@ -115,6 +115,22 @@ void requestCallback(request_payload payload, RF24NetworkHeader header) {
     radio.sendResponse(String(random(16,26)),payload,header);
   } 
   #endif
+  #ifdef Valves
+  else if (attribute_requested == "State") {
+    if (String(payload.additional_value).length() != 0) {
+      int index = String(payload.additional_value).toInt();
+      if (index > (valvePinsLength - 1)) { 
+        radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
+      } else {
+        if (digitalRead(valvePins[index]) == LOW) {
+          radio.sendResponse("OFF",payload,header);
+        } else if (digitalRead(valvePins[index]) == HIGH) {
+          radio.sendResponse("ON",payload,header);
+        }
+      }
+    }
+  }
+  #endif
   else {
     radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
   }
