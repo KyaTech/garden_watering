@@ -114,6 +114,17 @@ Optional: If more than one sensor on one device:
 }
 ````
 
+
+### Subscribe to Registrations
+**Definition**  
+`POST /subscriptions/registrations`  
+
+**Arguments**
+- `"callback_url":string"` the url where the callbacks should be send to
+
+**Response**
+- `201 Created`
+
 ## Typical Error Responses
 Here are the typical error responses described which can appear at each 
 request.

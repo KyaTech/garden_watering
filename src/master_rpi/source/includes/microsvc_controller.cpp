@@ -24,13 +24,25 @@
 // SOFTWARE.
 //
 
-#include <std_micro_service.hpp>
+#include <cpprest/http_listener.h>
+#include <cpprest/http_client.h>
+#include <cpprest/json.h>
+#include <cpprest/uri.h>
+#include <cpprest/ws_client.h>
+#include <cpprest/containerstream.h>
+#include <cpprest/interopstream.h>
+#include <cpprest/rawptrstream.h>
+#include <cpprest/producerconsumerstream.h>
+#include <basic_controller.hpp>
+#include "radio.hpp"
+#include "exceptions.hpp"
 #include "microsvc_controller.hpp"
 
-#include "radio.hpp"
-
-using namespace web;
-using namespace http;
+using namespace utility;                    // Common utilities like string conversions
+using namespace web;                        // Common features like URIs.
+using namespace web::http;                  // Common HTTP functionality
+using namespace web::http::client;          // HTTP client features
+using namespace concurrency::streams;
 
 void MeshMasterRestServer::initRestOpHandlers() {
     _listener.support(methods::GET, std::bind(&MeshMasterRestServer::handleGet, this, std::placeholders::_1));
@@ -185,7 +197,7 @@ void MeshMasterRestServer::handlePost(http_request message) {
                     if (path[2] == "valves") {
                         if (path.size() > 4 && !path[3].empty() && !path[4].empty()) {
                             string indexString = path[3];
-                            int index = std::stoi(indexString);
+                            std::stoi(indexString);
                             string command = path[4];
 
 
@@ -221,6 +233,7 @@ void MeshMasterRestServer::handlePost(http_request message) {
                     response["error"]["request_id"] = json::value::number((uint32_t) e.getRequestID());
                     response["error"]["internalMessage"] = json::value::string(e.giveMessage());
                     message.reply(status_codes::BadRequest, response);
+                    return;
                 } catch (PayloadNotSendableException &e) {
                     e.printException();
 
@@ -229,9 +242,36 @@ void MeshMasterRestServer::handlePost(http_request message) {
                     response["error"]["request_id"] = json::value::number((uint32_t) e.getRequestID());
                     response["error"]["internalMessage"] = json::value::string(e.giveMessage());
                     message.reply(status_codes::BadRequest, response);
+                    return;
                 }
             }
+        } else if (path[0] == "subscriptions" && path[1] == "registrations") {
+            message.
+                    extract_json().
+                    then([=](json::value request) {
+                try {
+                    if (request.at("callback_url").is_string()) {
+                        _callback_url = request.at("callback_url").as_string();
+
+                        std::cout << _callback_url << std::endl;
+
+                        message.reply(status_codes::Created);
+                    } else {
+                        throw json::json_exception(U("Please give \"callback_url\" as string"));
+                    }
+                }
+                catch (json::json_exception &e) {
+                    json::value response;
+                    response["error"] = json::value();
+                    response["error"]["message"] = json::value::string(e.what());
+
+                    message.reply(status_codes::BadRequest, response);
+                }
+                return;
+            });
+            return;
         }
+
     }
 
     message.reply(status_codes::NotFound);
@@ -263,7 +303,50 @@ void MeshMasterRestServer::handleMerge(http_request message) {
 
 json::value MeshMasterRestServer::responseNotImpl(const http::method &method) {
     auto response = json::value::object();
-    response["serviceName"] = json::value::string("C++ Mircroservice Sample");
+    response["serviceName"] = json::value::string("Mesh Master REST-API");
     response["http_method"] = json::value::string(method);
     return response;
+}
+
+void MeshMasterRestServer::registrationCallback(registration_payload_struct payload, int16_t node) {
+    if (!_callback_url.empty()) {
+        string callback = this->_callback_url;
+
+        create_task([callback, payload, node]() {
+
+            json::value registration;
+            registration["node"] = json::value::number(node);
+            if (payload.module_type == ModuleType::VALVE) {
+                registration["module"] = json::value::string("valve");
+            } else if (payload.module_type == ModuleType::SENSOR) {
+                registration["module"] = json::value::string("sensor");
+            } else {
+                registration["module"] = json::value::null();
+            }
+            if (payload.index != 255) {
+                registration["index"] = json::value::number(payload.index);
+            }
+            if (payload.pin != 255) {
+                registration["pin"] = json::value::number(payload.pin);
+            }
+
+            json::value request;
+            request["registration"] = registration;
+            request["request_id"] = json::value::number((uint32_t) payload.request_id);
+
+            uri_builder builder(callback.c_str());
+
+            // Create http_client to send the request.
+            http_client client(builder.to_uri());
+
+
+            printf("Send request to %s with the registration informations\n", callback.c_str());
+            // Build request URI and start the request.
+            return client.request(methods::POST, U("/"), request);
+        }).then([=](http_response response) {
+            printf("Received response status code: %u\n", response.status_code());
+            return;
+        });
+
+    }
 }

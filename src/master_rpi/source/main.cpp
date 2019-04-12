@@ -34,10 +34,12 @@ using namespace cfx;
 using namespace std;
 
 
-Radio radio = Radio();
+Radio radio;
+MeshMasterRestServer server;
 
 void registrationCallback(registration_payload_struct payload, RF24NetworkHeader header) {
     printRegistration(payload, radio.getNodeID(header.from_node));
+    server.registrationCallback(payload, radio.getNodeID(header.from_node));
     radio.sendSimpleResponse(SimpleResponse::OK, payload, header);
 }
 
@@ -50,7 +52,6 @@ void responseCallback(response_payload_struct payload, RF24NetworkHeader header)
 }
 
 int main(int argc, char **argv) {
-
     MeshMasterRestServer server;
     server.setEndpoint("http://0.0.0.0:8080/api/v1");
     server.setRadio(&radio);

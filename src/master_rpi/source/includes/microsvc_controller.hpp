@@ -26,6 +26,14 @@
 
 #pragma once
 
+#include <cpprest/http_listener.h>
+#include <cpprest/json.h>
+#include <cpprest/uri.h>
+#include <cpprest/ws_client.h>
+#include <cpprest/containerstream.h>
+#include <cpprest/interopstream.h>
+#include <cpprest/rawptrstream.h>
+#include <cpprest/producerconsumerstream.h>
 #include <basic_controller.hpp>
 #include "radio.hpp"
 #include "exceptions.hpp"
@@ -37,7 +45,7 @@ class MeshMasterRestServer : public BasicController, Controller {
 private:
     bool _toggle = false;
     Radio *_radio = nullptr;
-
+    string _callback_url = "http://localhost:8000/submit/callbacks";
     static json::value responseNotImpl(const http::method &method);
 
 public:
@@ -71,4 +79,5 @@ public:
 
     void initRestOpHandlers() override;
 
+    void registrationCallback(registration_payload_struct payload, int16_t node);
 };
