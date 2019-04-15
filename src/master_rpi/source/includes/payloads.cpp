@@ -13,7 +13,7 @@ PayloadType RequestPayload::getType() {
     return PayloadType::REQUEST;
 }
 
-char RequestPayload::getSymbol() {
+uint8_t RequestPayload::getSymbol() {
     return request_symbol;
 }
 
@@ -43,7 +43,7 @@ PayloadType ResponsePayload::getType() {
     return PayloadType::RESPONSE;
 }
 
-char ResponsePayload::getSymbol() {
+uint8_t ResponsePayload::getSymbol() {
     return response_symbol;
 }
 
@@ -78,7 +78,7 @@ PayloadType RegistrationPayload::getType() {
     return PayloadType::REGISTRATION;
 }
 
-char RegistrationPayload::getSymbol() {
+uint8_t RegistrationPayload::getSymbol() {
     return registration_symbol;
 }
 
@@ -110,7 +110,7 @@ PayloadType CommandPayload::getType() {
     return PayloadType::COMMAND;
 }
 
-char CommandPayload::getSymbol() {
+uint8_t CommandPayload::getSymbol() {
     return command_symbol;
 }
 

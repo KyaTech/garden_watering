@@ -84,7 +84,7 @@ public:
 
     virtual PayloadType getType() {};
 
-    virtual char getSymbol() {};
+    virtual uint8_t getSymbol() {};
 
     virtual const void *asSendable() {};
 
@@ -105,7 +105,7 @@ public:
 
     PayloadType getType() override;
 
-    char getSymbol() override;
+    uint8_t getSymbol() override;
 
     const void *asSendable() override;
 
@@ -125,7 +125,7 @@ public:
 
     PayloadType getType() override;
 
-    char getSymbol() override;
+    uint8_t getSymbol() override;
 
     const void *asSendable() override;
 
@@ -147,7 +147,7 @@ public:
 
     PayloadType getType() override;
 
-    char getSymbol() override;
+    uint8_t getSymbol() override;
 
     const void *asSendable() override;
 
@@ -168,7 +168,7 @@ public:
 
     PayloadType getType() override;
 
-    char getSymbol() override;
+    uint8_t getSymbol() override;
 
     const void *asSendable() override;
 

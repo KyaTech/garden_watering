@@ -133,7 +133,7 @@ public:
 
     //
     unsigned long
-    sendResponse(string value, radio_payload_struct &r_payload, uint16_t node) noexcept(false);
+    sendResponse(string value, radio_payload_struct &r_payload, int16_t node) noexcept(false);
 
     // function for sending responses with a RF24NetworkHeader and the value given
     unsigned long sendResponse(string value, radio_payload_struct &payload,

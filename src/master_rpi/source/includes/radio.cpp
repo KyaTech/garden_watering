@@ -176,7 +176,7 @@ unsigned long Radio::sendRequest(string attribute_requested, uint16_t node) noex
 
 /**** additional functions for responses ****/
 unsigned long
-Radio::sendResponse(string value, radio_payload_struct &r_payload, uint16_t node) noexcept(false) {
+Radio::sendResponse(string value, radio_payload_struct &r_payload, int16_t node) noexcept(false) {
     ResponsePayload payload;
     payload.request_id = r_payload.request_id;
     payload.value = std::move(value);
@@ -273,7 +273,7 @@ response_payload_struct Radio::waitForAnswer(unsigned long searched_request_id) 
         this->updateAndLog();
     }
 
-    unsigned long timout = 3000;
+    unsigned long timout = 5000;
     response_payload_struct nullPayload{};
     strcpy(nullPayload.value, "");
 
