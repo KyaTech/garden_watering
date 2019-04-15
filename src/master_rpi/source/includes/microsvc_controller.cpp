@@ -83,6 +83,7 @@ void MeshMasterRestServer::handleGet(http_request message) {
                                 response_mesh = _radio->waitForAnswer(_radio->sendRequest("Moisture", node));
                             }
 
+
                             json::value response;
                             response["request_id"] = json::value::number((uint32_t) response_mesh.request_id);
                             response["value"] = json::value::string(response_mesh.value);
@@ -312,6 +313,7 @@ void MeshMasterRestServer::registrationCallback(registration_payload_struct payl
     if (!_callback_url.empty()) {
         string callback = this->_callback_url;
 
+
         create_task([callback, payload, node]() {
 
             json::value registration;
@@ -343,10 +345,23 @@ void MeshMasterRestServer::registrationCallback(registration_payload_struct payl
             printf("Send request to %s with the registration informations\n", callback.c_str());
             // Build request URI and start the request.
             return client.request(methods::POST, U("/"), request);
-        }).then([=](http_response response) {
-            printf("Received response status code: %u\n", response.status_code());
-            return;
+        }).then([=](task<http_response> task) {
+
+            try {
+                auto response = task.get();
+
+                printf("Received response status code: %u\n", response.status_code());
+                return;
+            } catch (std::exception &e) {
+                printf("Could not send the registration payload.\n");
+            }
+
         });
 
+
     }
+}
+
+MeshMasterRestServer::MeshMasterRestServer() : BasicController() {
+    _callback_url = "http://192.168.176.39:8000/callbacks/submit";
 }

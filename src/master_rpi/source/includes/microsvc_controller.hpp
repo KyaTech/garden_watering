@@ -43,13 +43,12 @@ using namespace cfx;
 class MeshMasterRestServer : public BasicController, Controller {
 
 private:
-    bool _toggle = false;
     Radio *_radio = nullptr;
-    string _callback_url = "http://localhost:8000/submit/callbacks";
+    string _callback_url = "";
     static json::value responseNotImpl(const http::method &method);
 
 public:
-    MeshMasterRestServer() : BasicController() {}
+    MeshMasterRestServer();
 
     ~MeshMasterRestServer() = default;
 
