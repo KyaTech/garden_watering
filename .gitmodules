@@ -1,0 +1,3 @@
+[submodule ".\\nodes\\MeshMaster_Server"]
+	path = .\\nodes\\MeshMaster_Server
+	url = git@github.com:KyaTech/garden_watering-MeshMaster_Server.git
