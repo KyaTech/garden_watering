@@ -8,8 +8,8 @@
 //Include eeprom.h for AVR (Uno, Nano) etc. except ATTiny
 #include <EEPROM.h>
 
-#include "C:\Users\aykbo\OneDrive\Dokumente\Arduino Projektkurs\main_project\src\includes\names.h"
-#include "C:\Users\aykbo\OneDrive\Dokumente\Arduino Projektkurs\main_project\src\includes\Radio.h"
+#include "C:\Users\aykbo\Documents\garden_watering\nodes\includes\names.h"
+#include "C:\Users\aykbo\Documents\garden_watering\nodes\includes\Radio.h"
 
 
 Radio radio;
