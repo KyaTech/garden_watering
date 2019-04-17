@@ -2,7 +2,7 @@ FROM balenalib/%%BALENA_MACHINE_NAME%%-debian:stretch
 
 # Install build tools and remove apt-cache afterwards
 RUN apt-get -q update && apt-get install -yq --no-install-recommends \
-	build-essential cmake make libcpprest-dev openssl libboost-all-dev openssh-server\
+	build-essential cmake make libcpprest-dev openssl libboost-all-dev openssh-server gdb\
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/
 

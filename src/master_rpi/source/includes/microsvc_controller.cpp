@@ -363,5 +363,5 @@ void MeshMasterRestServer::registrationCallback(registration_payload_struct payl
 }
 
 MeshMasterRestServer::MeshMasterRestServer() : BasicController() {
-    _callback_url = "http://192.168.176.39:8000/callbacks/submit";
+    _callback_url = "http://localhost:3000/callbacks/submit";
 }
