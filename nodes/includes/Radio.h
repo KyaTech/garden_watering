@@ -206,26 +206,41 @@ class Radio {
         /**** END ****/
 
         /**** additional functions for responses ****/
-        bool sendResponse(String value,radio_payload& r_payload,uint16_t node) {
+        bool sendResponse(String value,AdditionalInformation additional_information,radio_payload& r_payload,uint16_t node) {
             response_payload payload;
             payload.request_id = r_payload.request_id;
+            payload.additional_information = additional_information;
             value.toCharArray(payload.value,MAX_CHAR_SIZE);
             return sendResponse(payload,node);
+        }
+        bool sendResponse(String value,radio_payload& r_payload,uint16_t node) {
+            return sendResponse(value,AdditionalInformation::UNDEFINED,r_payload,node);
+        }
+        // function for sending responses with a RF24NetworkHeader and the value given 
+        bool sendResponse(String value,AdditionalInformation additional_information,radio_payload& payload,RF24NetworkHeader& header) {
+            return sendResponse(value,additional_information,payload,_mesh.getNodeID(header.from_node));
         }
         // function for sending responses with a RF24NetworkHeader and the value given 
         bool sendResponse(String value,radio_payload& payload,RF24NetworkHeader& header) {
             return sendResponse(value,payload,_mesh.getNodeID(header.from_node));
         }
+        
+
         // function for sending standardized responses 
-        bool sendSimpleResponse(SimpleResponse type,radio_payload& payload, RF24NetworkHeader& header) {
+        bool sendSimpleResponse(SimpleResponse type,AdditionalInformation additional_information, radio_payload& payload, RF24NetworkHeader& header) {
             switch (type) {
                 case SimpleResponse::ERROR:
-                    return this->sendResponse(String("ERROR"),payload,header);
+                    return this->sendResponse(String("ER"),additional_information,payload,header);
                 case SimpleResponse::OK:
-                    return this->sendResponse(String("OK"),payload,header);
+                    return this->sendResponse(String("OK"),additional_information,payload,header);
                 default:
                     return false;
             }
+        }
+
+        // function for sending standardized responses 
+        bool sendSimpleResponse(SimpleResponse type,radio_payload& payload, RF24NetworkHeader& header) {
+            return sendSimpleResponse(type,AdditionalInformation::UNDEFINED,payload,header);
         }
 
         /**** END ****/

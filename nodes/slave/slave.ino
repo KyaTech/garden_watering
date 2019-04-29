@@ -78,7 +78,7 @@ void commandCallback(command_payload payload,RF24NetworkHeader header) {
     int index = String(payload.additional_value).toInt();
 
     if (index > (valvePinsLength - 1)) {
-      radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
+      radio.sendSimpleResponse(SimpleResponse::ERROR,AdditionalInformation::INVALIDINDEX,payload,header);
     } else {
       digitalWrite(valvePins[index],HIGH);
       radio.sendSimpleResponse(SimpleResponse::OK,payload,header);
@@ -88,13 +88,13 @@ void commandCallback(command_payload payload,RF24NetworkHeader header) {
     int index = String(payload.additional_value).toInt();
 
     if (index > (valvePinsLength - 1)) {
-      radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
+      radio.sendSimpleResponse(SimpleResponse::ERROR,AdditionalInformation::INVALIDINDEX,payload,header);
     } else {
       digitalWrite(valvePins[index],LOW);
       radio.sendSimpleResponse(SimpleResponse::OK,payload,header);
     }
   } else {
-    radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
+    radio.sendSimpleResponse(SimpleResponse::ERROR,AdditionalInformation::INVALIDCOMMAND,payload,header);
   }
   #endif
 }
@@ -120,7 +120,7 @@ void requestCallback(request_payload payload, RF24NetworkHeader header) {
     if (String(payload.additional_value).length() != 0) {
       int index = String(payload.additional_value).toInt();
       if (index > (valvePinsLength - 1)) { 
-        radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
+        radio.sendSimpleResponse(SimpleResponse::ERROR,AdditionalInformation::INVALIDINDEX,payload,header);
       } else {
         if (digitalRead(valvePins[index]) == LOW) {
           radio.sendResponse("OFF",payload,header);
@@ -132,7 +132,7 @@ void requestCallback(request_payload payload, RF24NetworkHeader header) {
   }
   #endif
   else {
-    radio.sendSimpleResponse(SimpleResponse::ERROR,payload,header);
+    radio.sendSimpleResponse(SimpleResponse::ERROR,AdditionalInformation::INVALIDREQUEST,payload,header);
   }
     
 }

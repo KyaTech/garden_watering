@@ -15,6 +15,13 @@ enum ModuleType {
   VALVE = 1,
 };
 
+enum AdditionalInformation {
+  UNDEFINED = 0,
+  INVALIDINDEX = 1,
+  INVALIDREQUEST = 2,
+  INVALIDCOMMAND = 3
+};
+
 struct radio_payload {
     unsigned long request_id;
 };
@@ -25,7 +32,8 @@ struct request_payload : public radio_payload{
 };
 
 struct response_payload : public radio_payload {
-    char value[MAX_CHAR_SIZE];
+    char value[SHORT_CHAR_SIZE];
+    unsigned char additional_information;
 };
 
 struct registration_payload : public radio_payload {
